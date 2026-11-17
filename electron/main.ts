@@ -29,7 +29,7 @@ else {
       win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
       win.webContents.on('will-navigate', (event, url) => { if (new URL(url).origin !== host.origin) event.preventDefault(); });
     };
-    main = new BrowserWindow({ title: 'PRMTA — Your words. Your pace.', icon: join(__dirname, '../build/icon.png'), width: 1480, height: 1000, minWidth: 800, minHeight: 650, backgroundColor: '#111214', autoHideMenuBar: true, show: false,
+    main = new BrowserWindow({ title: 'PRMTA | Your words. Your pace.', icon: join(__dirname, '../build/icon.png'), width: 1480, height: 1000, minWidth: 800, minHeight: 650, backgroundColor: '#111214', autoHideMenuBar: true, show: false,
       webPreferences: { preload: join(__dirname, 'preload.cjs'), nodeIntegration: false, contextIsolation: true, sandbox: true, backgroundThrottling: false },
     });
     safeWindow(main);

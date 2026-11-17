@@ -18,16 +18,26 @@ export function alignTranscript(content: string | readonly Word[], transcript: s
   const script = all.slice(low, Math.floor(position) + 72).map(w => w.normalized);
   if (spoken.length < 3 || !script.length) return { position, confidence: 0, matched: false };
   let row = new Array(script.length + 1).fill(0);
+  let starts = Array.from({ length: script.length + 1 }, (_, index) => index);
   for (let i = 1; i <= spoken.length; i++) {
     const next = [i * .9];
-    for (let j = 1; j <= script.length; j++) next[j] = Math.min(row[j] + .9, next[j - 1] + .9, row[j - 1] + substitution(spoken[i - 1], script[j - 1]));
-    row = next;
+    const nextStarts = [0];
+    for (let j = 1; j <= script.length; j++) {
+      let cost = row[j - 1] + substitution(spoken[i - 1], script[j - 1]), start = starts[j - 1];
+      if (row[j] + .9 < cost) { cost = row[j] + .9; start = starts[j]; }
+      if (next[j - 1] + .9 < cost) { cost = next[j - 1] + .9; start = nextStarts[j - 1]; }
+      next[j] = cost; nextStarts[j] = start;
+    }
+    row = next; starts = nextStarts;
   }
   let best = { score: -Infinity, confidence: 0, end: position };
+  const omissionAllowance = Math.min(6, spoken.length);
   for (let j = 1; j <= script.length; j++) {
     const confidence = Math.max(0, 1 - row[j] / spoken.length);
-    // Prefer the nearest matching passage. A longer jump needs stronger evidence.
+    // Recognition follows the reading position; it must not act as a script-wide seek.
+    // Allow a few omitted words, overlapping audio, and at most one short window of progress.
     const end = low + j; const distance = Math.abs(end - position);
+    if (end > position && (low + starts[j] > Math.floor(position) + omissionAllowance || end - position > Math.min(24, spoken.length + omissionAllowance))) continue;
     const score = confidence - distance * .003;
     if (score > best.score) best = { score, confidence, end };
   }

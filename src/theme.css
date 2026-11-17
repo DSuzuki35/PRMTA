@@ -24,3 +24,32 @@ button,input,select,textarea{transition:background-color 140ms ease,border-color
 .microphone-test{margin:16px 0 24px;padding:16px;background:var(--bg);border:1px solid var(--line);border-radius:12px}.microphone-test-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.microphone-test output{font-family:'DM Mono',monospace;font-size:12px}.input-meter{height:12px;border-radius:6px;background:var(--surface2,#25262c);overflow:hidden;position:relative}.input-meter-fill{height:100%;background:linear-gradient(90deg,#7059dd 0%,#a79bf0 70%,#e8ba65 90%,#ec7474 100%);transition:width 70ms linear}.input-meter-peak{position:absolute;top:0;bottom:0;width:2px;background:#fff}.input-meter-scale{display:flex;justify-content:space-between;margin-top:6px;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)}.microphone-test p{font-size:12px;margin:12px 0 0}.assignment-field{display:flex;flex-direction:column;gap:10px;min-width:0}.assignment-control{display:flex;gap:12px;align-items:center;justify-content:space-between;border:1px solid var(--control-border);padding:10px;border-radius:12px}.assignment-control output{font-family:'DM Mono',monospace;font-size:13px;white-space:nowrap}.assignment-control .button{white-space:nowrap}.assignment-status{color:var(--accent);font-size:13px}.fit-note{font-size:11px;line-height:1.6}.stage-toolbar .voice-toggle{margin-left:auto;font-family:'Inter Variable',sans-serif;letter-spacing:0}.stage-toolbar .voice-toggle+.icon-button{margin-left:0}
 
 .next-page-preview{margin-top:.8em;overflow:hidden;opacity:.45;color:#c6c6ce;pointer-events:none;white-space:pre-wrap}.next-page-preview .marked-word{color:inherit;background:none}.next-page-preview .bold-word{font-weight:inherit}
+/* Accessible controls and keyboard navigation. */
+:root{--control-border:#737787}
+.version,.speed-control small,.script-card-top small,.script-card-bottom,.new-script-card span,.empty-list{color:var(--muted)}
+input::placeholder,textarea::placeholder{color:#9296a3}
+.appearance-panel>.toggle-field{margin-top:16px;margin-bottom:0}
+.toggle-field{min-height:44px;gap:16px;line-height:1.5;color:#b9bdc8}
+.toggle-field>span:first-child{min-width:0;flex:1}
+.toggle-field input{width:48px;height:44px;top:50%;transform:translateY(-50%);margin:0}
+.switch{width:44px;height:24px;border:1px solid #8b8e99;background:#43454f}
+.switch:after{width:18px;height:18px;left:2px;top:2px}
+.toggle-field input:checked+.switch{border-color:var(--primary)}
+.toggle-field input:focus-visible+.switch{outline:3px solid var(--accent);outline-offset:4px}
+.appearance-panel select,.settings-card input:not([type=checkbox]),.settings-card select{min-height:40px}
+.appearance-panel .range-field,.appearance-panel .toggle-field,.appearance-panel .flow-field,.appearance-panel .two-fields label{font-size:13px}
+.range-field input{height:24px}.range-field>span{gap:12px;margin-bottom:4px}
+.progress-track{height:24px}.progress-track input{height:24px}
+.icon-button,.speed-control button,.editor-toolbar button,.toast>button,.library-caption button{min-width:36px;min-height:36px}
+.library-caption{align-items:center}.text-button,summary{min-height:32px}.text-button{display:inline-flex;align-items:center}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+#main-content:focus{outline:none}
+.skip-link{position:fixed;z-index:150;top:12px;left:12px;padding:12px 18px;background:var(--panel);color:#fff;border:2px solid var(--accent);border-radius:8px;transform:translateY(-200%)}
+.skip-link:focus{transform:translateY(0)}
+dialog.modal{color:#f4f4f6;margin:auto;max-width:min(850px,calc(100vw - 40px));border:1px solid var(--control-border)}
+dialog.help-modal{max-width:min(570px,calc(100vw - 40px))}
+dialog::backdrop{background:#080b0dcc;backdrop-filter:blur(8px)}
+.output-fullscreen:focus-visible{opacity:1;background:var(--panel)}
+@media(forced-colors:active){.switch{background:Canvas;border-color:ButtonText}.switch:after{background:ButtonText}.toggle-field input:checked+.switch{background:Highlight}.toggle-field input:checked+.switch:after{background:HighlightText}.button,.icon-button{border:1px solid ButtonText}}
+@media(max-width:900px){.appearance-panel .two-fields{gap:16px}.assignment-control{flex-wrap:wrap}.studio-heading>.button-row{max-width:none}.stage-footer>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:12px}}
+.end-mark{color:var(--muted)}

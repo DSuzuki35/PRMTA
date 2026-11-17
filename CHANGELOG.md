@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.3 - UI accessibility and voice continuity
+
+- Removed decorative long dashes from window/browser titles, duplicate names and the end marker.
+- Increased spacing below flow selectors and enlarged switch, slider and icon-button targets.
+- Improved control borders, muted text contrast, keyboard focus and forced-colors styling.
+- Exposed switch/button states, labeled navigation and added a skip link.
+- Made Help and Version history modal keyboard dialogs with focus containment, Escape handling and opener restoration; modal keys no longer affect playback.
+- Added automated accessibility checks across the four main views, wide and narrow layouts, plus keyboard regressions.
+- Prevented distant accidental speech matches from moving the prompter; matches must connect to the current position and progress is bounded. Manual navigation remains available for intentional skips.
+
 ## 0.2.2 — Natural page endings
 
 - Automatic pages now keep whole sentences together around a 60-word target; overlong sentences may split at clause punctuation instead of arbitrary words.

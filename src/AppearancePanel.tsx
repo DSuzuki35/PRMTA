@@ -1,8 +1,8 @@
 import type { Appearance, Preferences, Profile } from '../shared/model';
 export function Range({ label, value, min, max, step = 1, suffix = '', onChange }: { label: string; value: number; min: number; max: number; step?: number; suffix?: string; onChange: (n: number) => void }) {
-  return <label className="range-field"><span>{label}<output>{value}{suffix}</output></span><input aria-label={label} type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(Number(e.target.value))}/></label>;
+  return <label className="range-field"><span>{label}<output aria-live="off">{value}{suffix}</output></span><input aria-label={label} aria-valuetext={`${value}${suffix}`} type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(Number(e.target.value))}/></label>;
 }
-export function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (value: boolean) => void }) { return <label className="toggle-field"><span>{label}</span><input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)}/><span className="switch"/></label>; }
+export function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (value: boolean) => void }) { return <label className="toggle-field"><span>{label}</span><input type="checkbox" role="switch" aria-checked={checked} checked={checked} onChange={e => onChange(e.target.checked)}/><span className="switch" aria-hidden="true"/></label>; }
 export function AppearancePanel({ preferences, profile, setProfile, onChange }: { preferences: Preferences; profile: Profile; setProfile: (p: Profile) => void; onChange: (p: Preferences) => void }) {
   const appearance = preferences.profiles[profile];
   const set = (patch: Partial<Appearance>) => onChange({ ...preferences, profiles: { ...preferences.profiles, [profile]: { ...appearance, ...patch } } });

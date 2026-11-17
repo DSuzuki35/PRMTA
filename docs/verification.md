@@ -1,5 +1,14 @@
 # Release verification — PRMTA
 
+## 0.2.3 update verification
+
+- Production build, 48 unit/integration tests and 22 browser workflows cover the UI pass and voice continuity guard.
+- Axe reported no tagged WCAG A/AA violations in the four standard screens at 1440 and 800 pixels wide, and in the Help dialog. This is an automated check of those states, not full conformance certification or screen-reader user testing.
+- Keyboard tests cover switch activation/focus, spacing, modal Tab containment, Escape/opener restoration and preventing arrow shortcuts from moving playback inside a dialog.
+- A regression reproduced a three-word phrase jumping from position 0 to 43 before the fix. Distant and chained accidental matches now hold; nearby variations and deliberate seek/resume are covered.
+- The real Base audio fixture reached position 12 with confidence 1.0 after 7.9 seconds, with no renderer errors. This confirms ordinary voice progression still works, not a per-word latency guarantee.
+- Native screenshots were refreshed and inspected. Claude Code found no release blockers in the reviewed UI and alignment changes.
+
 ## 0.2.2 update verification
 
 - Production build, 42 unit/integration tests and 18 Chromium workflows passed locally and in Windows CI. The portable 0.2.2 executable passed extraction, sample loading, bundled voice setup and clean shutdown. SHA-256: `699d143caa00f4e21489ba3b815b58a8cc1327ddbdaf6747079be418935f4cf5`.

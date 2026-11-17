@@ -4,7 +4,7 @@ PRMTA is a Windows teleprompter studio with a local script library. The interfac
 
 ## Your first take
 
-1. Start `PRMTA-0.2.2-Windows-x64.exe`. Keep the application open during your take.
+1. Start `PRMTA-0.2.3-Windows-x64.exe`. Keep the application open during your take.
 2. Click **Try a sample**, or **Create script** to write your own.
 3. In **Library**, name the script, paste your text and click **Load in prompter**. Editing autosaves after a short pause. The save indicator confirms success.
 4. Choose **Auto**, **Voice**, or **Manual**. Press **Play** or Space.
@@ -55,6 +55,14 @@ There are three independent appearance profiles: **Studio preview**, **External 
 Scroll the mouse wheel over the preview to navigate, or click a word to jump there. Blackout hides output while preserving the take. The elapsed timer counts active playback; remaining time is an estimate using the current WPM. Countdown and loop are configured in Settings. Pausing stops progress; Reset returns to the beginning.
 
 ![Page mode with a muted preview of the next line](images/page-preview.png)
+
+## Keyboard access and readability
+
+Use Tab and Shift+Tab to move between controls. The first focusable link skips to the main content. Switches announce their on/off state and toggle with Space; sliders support the arrow keys. Focus rings remain visible in the dark theme and Windows forced-colors mode.
+
+Quick start and Version history keep keyboard focus inside the dialog. Escape closes the dialog and returns focus to the opener. Playback shortcuts do not run while a dialog is open. Button state is exposed for voice, playback mode, blackout and favorites.
+
+Control borders, muted interface text and click targets have been strengthened. Appearance colors and dimming remain user-configurable. Automated checks cover standard screens at 800 and 1440 pixels wide; they are not a complete accessibility certification or a replacement for assistive-technology user testing.
 
 ## Elgato Prompter and external displays
 
