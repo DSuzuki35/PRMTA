@@ -9,7 +9,7 @@ export class ConflictError extends Error { status = 409; }
  * Iterative DFS (no call-stack depth limit). Invalid if a cycle exists or a parent belongs to another script.
  * Parents missing from the graph are tolerated: they may arrive in a later sync.
  */
-function validChain(graph: Map<string, Revision>, id: string, revisions: Revision[]): boolean {
+export function validChain(graph: Map<string, Revision>, id: string, revisions: Revision[]): boolean {
   const visiting = new Set<string>(), visited = new Set<string>();
   for (const root of revisions) {
     if (visited.has(root.revision)) continue;

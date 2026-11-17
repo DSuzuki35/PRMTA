@@ -3,7 +3,8 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { Library } from '../server/library';
+import { Library, validChain } from '../server/library';
+import type { Revision } from '../shared/model';
 import { Session } from '../server/session';
 import { alignTranscript } from '../shared/matcher';
 import { tokenize } from '../shared/text';
@@ -69,18 +70,18 @@ describe('library list cache and get', () => {
 });
 
 describe('iterative revision validation', () => {
-  it('imports a very deep chain without a stack overflow', () => {
-    const l = lib(), cloud = dir(); const a = l.save(draft(), []); const depth = 12000;
-    let parent = a.revision;
+  it('validates a very deep chain and rejects a deep cycle without a stack overflow', () => {
+    const a: Revision = { ...draft(), revision: randomUUID(), parents: [], updatedAt: new Date().toISOString() };
+    const graph = new Map<string, Revision>([[a.revision, a]]); const depth = 12000; let parent = a.revision;
     for (let i = 0; i < depth; i++) {
       const revision = randomUUID();
-      writeFileSync(join(cloud, `${i}.prmpt.json`), JSON.stringify({ ...a, revision, parents: [parent], content: `v${i}`, updatedAt: new Date(Date.now() + i + 1).toISOString() }));
+      graph.set(revision, { ...a, revision, parents: [parent], content: `v${i}` });
       parent = revision;
     }
-    const result = l.sync(cloud);
-    expect(result.errors).toEqual([]); expect(result.imported).toBe(depth);
-    expect(l.get(a.id)!.heads).toEqual([parent]);
-  }, 180000);
+    // Start at the deepest node, exercising the full path rather than pre-visiting each ancestor.
+    expect(validChain(graph, a.id, [graph.get(parent)!])).toBe(true);
+    a.parents = [parent]; expect(validChain(graph, a.id, [graph.get(parent)!])).toBe(false);
+  });
   it('still rejects cycles and cross-script parents', () => {
     const l = lib(), cloud = dir(); const a = l.save(draft(), []); const other = l.save(draft(), []);
     const b = randomUUID(), c = randomUUID(), d = randomUUID();

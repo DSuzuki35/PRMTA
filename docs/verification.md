@@ -20,7 +20,7 @@ Verified on Windows x64, 17 November 2026. Source checks use Node 24; the Window
 
 Browser coverage includes lossless multilingual TXT import/export, editing and reload, pinned output, blackout, trash restore, draft recovery, external revisions, vertical mirroring, voice-driven page changes, keyboard and simulated gamepad navigation, VR transparency, restoring font size after page mode, the model-label layout at 800 and 1600 px widths, and one-button voice setup with download progress.
 
-Core coverage includes stale-write rejection, cloud branches/collisions/invalid chains, revision history, timing/looping/matching, a 12,000-revision graph, cached-list invalidation across connections, cached token matching, malformed drafts, model allowlisting and corrupted/truncated download rejection. The large-chain test creates temporary files and can take tens of seconds on Windows.
+Core coverage includes stale-write rejection, cloud branches/collisions/invalid chains, revision history, timing/looping/matching, a 12,000-revision graph, cached-list invalidation across connections, cached token matching, malformed drafts, model allowlisting and corrupted/truncated download rejection. The initial full-file 12,000-revision stress check passed locally but exceeded the hosted Windows runner's time budget. The CI regression now tests the same deep graph and a deep cycle in memory; file transport remains covered by separate integration fixtures. This changes test construction, not application behavior.
 
 ## Claude Code review and optimization
 
