@@ -10,7 +10,7 @@
 - Simulated gamepad assignment verifies release → press → release, ignores held inputs and disconnects, and rejects duplicate assignments. Physical gamepads remain untested.
 - `node scripts/clipboard-smoke.mjs` clicked Copy link in native Electron and compared the Windows clipboard with the output URL. The pre-test clipboard was restored without logging its contents.
 - The real local Base speech fixture reached position 10 with confidence 1.0 after 7.9 seconds of playback, with no renderer errors (`node scripts/voice-runtime-smoke.mjs`). This is a fixture-progress result, not a per-word latency guarantee.
-- Updated English studio and Settings screenshots were inspected. Native portable verification is recorded below after packaging.
+- Updated English studio and Settings screenshots were inspected. The final 0.2.1 portable executable passed extraction, sample loading, one-button bundled voice setup and clean shutdown. SHA-256: `18751cc6cf4fc70ad3b874f501ef07768cef1db989519be9e1329ef162ceceab`.
 - The actual Claude Code CLI reviewed these changes. Follow-up fixes include demand-driven animation, viewport capacity, transport revision checks, microphone startup generation guards, wheel thresholds, and assignment safeguards. The follow-up review found no blockers in the scoped fixes; its StrictMode cleanup observation was also applied. Review reports remain local because they include session metadata.
 
 ## 0.2.0 baseline verification
