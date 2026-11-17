@@ -11,6 +11,7 @@ Verified on Windows x64, 17 November 2026. Source checks use Node 24; the Window
 | Chromium workflows | 8 tests passed (`npm run test:e2e`). |
 | Native Electron smoke | Sample loaded, monitor enumeration succeeded, no renderer errors, clean process exit. |
 | Packaged Windows smoke | Unpacked PRMTA executable started, loaded the sample, enumerated the display, and started its bundled Whisper server successfully. |
+| Portable distribution | Extraction, sample script, one-button bundled voice setup and clean shutdown passed (`node scripts/portable-smoke.mjs`). |
 | Real model lifecycle | Base started; Tiny downloaded from the official artifact source and passed SHA-256/size checks; switched to Tiny, then back to Base. |
 | Real speech fixture | Fake Chromium microphone played the JFK WAV fixture through local Whisper; voice alignment reached word position 14, confidence 1.0, with no renderer errors. |
 | Draft close/relaunch | Closed a native window with an unfinished empty title; reopened the same profile and recovered the unsaved text. |

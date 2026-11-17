@@ -20,7 +20,7 @@
 
 ## Get started
 
-1. Download `PRMTA 0.2.0.exe` from [Releases](https://github.com/DSuzuki35/PRMTA/releases/latest).
+1. Download `PRMTA-0.2.0-Windows-x64.exe` from [Releases](https://github.com/DSuzuki35/PRMTA/releases/latest).
 2. Run it and choose **Try a sample** or **Create script**.
 3. Press **Play**. For voice following, turn on the microphone and choose **Voice**.
 4. In **Outputs**, choose an external monitor, copy a browser link or add the VR link to OpenKneeboard.

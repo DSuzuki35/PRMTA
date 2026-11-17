@@ -4,7 +4,7 @@ PRMTA is a Windows teleprompter studio with a local script library. The interfac
 
 ## Your first take
 
-1. Start `PRMTA 0.2.0.exe`. Keep the application open during your take.
+1. Start `PRMTA-0.2.0-Windows-x64.exe`. Keep the application open during your take.
 2. Click **Try a sample**, or **Create script** to write your own.
 3. In **Library**, name the script, paste your text and click **Load in prompter**. Editing autosaves after a short pause. The save indicator confirms success.
 4. Choose **Auto**, **Voice**, or **Manual**. Press **Play** or Space.
