@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowUpRight, Bold, Copy, Download, Highlighter, History, Save, Star, Trash2, Undo2 } from 'lucide-react';
 import type { Revision, Script } from '../shared/model';
 import { tokenize, formatTime } from '../shared/text';
@@ -47,7 +47,7 @@ export function Editor({ script, onSaved, onLoad, onCopy, report }: { script: Sc
   }, []);
   const wrap = (marker: string) => { const el = textarea.current; if (!el) return; const a = el.selectionStart, b = el.selectionEnd; update({ content: draft.content.slice(0, a) + marker + draft.content.slice(a, b) + marker + draft.content.slice(b) }); requestAnimationFrame(() => { el.focus(); el.setSelectionRange(a + marker.length, b + marker.length); }); };
   const download = () => { const blob = new Blob([draft.content], { type: 'text/plain;charset=utf-8' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${draft.title.replace(/[<>:"/\\|?*]/g, '_')}.txt`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
-  const words = tokenize(draft.content).length;
+  const words = useMemo(() => tokenize(draft.content).length, [draft.content]);
   return <section className="editor">
     <div className="editor-heading"><div className="eyebrow">SCRIPT EDITOR</div><span className={`save-state ${status.includes('failed') ? 'error-text' : ''}`}>{status}</span></div>
     <input className="title-input" aria-label="Script title" value={draft.title} onChange={e => update({ title: e.target.value })} maxLength={200}/>

@@ -89,7 +89,9 @@ test('pages follow voice, keyboard and mapped gamepad buttons; VR stays transpar
   await request('/command', { type: 'pause' });
   const current = await (await fetch(`${host.origin}/api/state`, { headers: { Authorization: `Bearer ${host.tokens.admin}` } })).json();
   await request('/preferences', { ...current.preferences, gamepadEnabled: true });
-  await page.evaluate(() => { Object.defineProperty(navigator, 'getGamepads', { configurable: true, value: () => [{ index: 0, buttons: Array.from({ length: 6 }, (_, i) => ({ pressed: i === 5 })) }] }); });
+  await page.evaluate(() => { Object.defineProperty(navigator, 'getGamepads', { configurable: true, value: () => [{ index: 0, id: 'fixture', buttons: Array.from({ length: 6 }, () => ({ pressed: false })) }] }); });
+  await page.waitForTimeout(120);
+  await page.evaluate(() => { Object.defineProperty(navigator, 'getGamepads', { configurable: true, value: () => [{ index: 0, id: 'fixture', buttons: Array.from({ length: 6 }, (_, i) => ({ pressed: i === 5 })) }] }); });
   await expect(page.locator('.page-number')).toHaveText('3 / 3');
   const output = await context.newPage(); await output.goto(host.url('output', host.origin, 'vr'));
   await expect(output.locator('.prompter')).toHaveClass(/transparent/);

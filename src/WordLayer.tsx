@@ -18,6 +18,6 @@ export const WordLayer = memo(function WordLayer({ content, index, start, end, p
     });
   }, [content]);
   if (!segments.length) return <div className="prompter-empty"><span className="empty-mark">P<span>_</span></span><p>Your words.<br/>Your pace.</p><small>Open a script and load it in the prompter.</small></div>;
-  const first = paged ? start : 0, last = paged ? end : segments.length;
-  return <>{segments.slice(first, last).map((segment, offset) => { const i = first + offset; return <Word key={i} segment={segment} index={i} current={highlight && i === index} read={dimRead && i < index} first={paged && i === first} onSeek={onSeek}/>; })}{!paged && <div className="end-mark">— END —</div>}</>;
+  const first = start, last = end;
+  return <>{segments.slice(first, last).map((segment, offset) => { const i = first + offset; return <Word key={i} segment={segment} index={i} current={highlight && i === index} read={dimRead && i < index} first={i === first} onSeek={onSeek}/>; })}{!paged && last >= segments.length && <div className="end-mark">— END —</div>}</>;
 });

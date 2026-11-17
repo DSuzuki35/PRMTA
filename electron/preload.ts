@@ -5,4 +5,5 @@ contextBridge.exposeInMainWorld('desktop', {
   closeOutputs: () => ipcRenderer.invoke('close-outputs'),
   chooseFolder: () => ipcRenderer.invoke('choose-folder'),
   openBrowser: (url: string) => ipcRenderer.invoke('open-browser', url),
+  copyText: (text: string) => ipcRenderer.invoke('copy-text', text),
 });

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, screen, session as electronSession, shell, powerSaveBlocker } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, ipcMain, screen, session as electronSession, shell, powerSaveBlocker } from 'electron';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { createHost, type Host } from '../server/host';
@@ -42,6 +42,7 @@ else {
     });
     electronSession.defaultSession.setPermissionCheckHandler((contents, permission, origin) => contents === main?.webContents && permission === 'media' && origin.startsWith(host.origin));
     const admin = (event: Electron.IpcMainInvokeEvent) => { if (event.sender !== main?.webContents || !event.senderFrame?.url.startsWith(host.origin + '/')) throw new Error('Untrusted window'); };
+    ipcMain.handle('copy-text', async (event, text: string) => { admin(event); if (typeof text !== 'string' || text.length > 16000) throw new Error('Invalid clipboard text.'); await clipboard.writeText(text); });
     ipcMain.handle('displays', event => { admin(event); const primary = screen.getPrimaryDisplay().id; return screen.getAllDisplays().map((d, i) => ({ id: d.id, label: d.label || `Display ${i + 1}`, width: d.size.width, height: d.size.height, primary: primary === d.id })); });
     ipcMain.handle('output', async (event, id: number, profile: string) => {
       admin(event); const display = screen.getAllDisplays().find(d => d.id === id); if (!display) throw new Error('Display disconnected. Refresh the list.');

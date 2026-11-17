@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { defaultPreferences, type SessionState } from '../shared/model';
 import { token, type StateMessage } from './api';
-const initial: SessionState = { script: null, position: 0, playing: false, mode: 'timed', speed: 130, blackout: false, loop: false, countdownUntil: 0, elapsed: 0, updatedAt: 0, speech: { transcript: '', confidence: 0, status: 'Ready' } };
+const initial: SessionState = { script: null, position: 0, playing: false, mode: 'timed', speed: 130, blackout: false, loop: false, countdownUntil: 0, elapsed: 0, updatedAt: 0, transportRevision: 0, speech: { transcript: '', confidence: 0, status: 'Ready' } };
 export function useSession(onLibrary?: () => void) {
   const [session, setSession] = useState(initial); const [preferences, setPreferences] = useState(defaultPreferences);
   const [connected, setConnected] = useState(false);

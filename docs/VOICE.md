@@ -2,7 +2,7 @@
 
 PRMTA separates speech recognition from script following. Whisper turns short microphone windows into text. A bounded fuzzy alignment matches that text to nearby words in the script. Small omissions, fillers and slightly different wording are tolerated; arbitrary paraphrasing and large jumps are not guaranteed. At least three usable recognized words are required before matching advances.
 
-Recognition is local when using the default Whisper provider. The microphone is resampled to 16 kHz mono WAV and sent over loopback HTTP to whisper.cpp. PRMTA buffers at most six seconds, checks approximately every 1.8 seconds, and permits one inference request at a time. Silence is gated. This favors stability over word-by-word zero-latency recognition. The timeout for one inference is 20 seconds.
+Recognition is local when using the default Whisper provider. The microphone is resampled to 16 kHz mono WAV and sent over loopback HTTP to whisper.cpp. The default **Responsive** setting keeps approximately three seconds of overlapping audio and checks every 500 ms after the first second of speech. **Steady** uses five seconds and a 1,000 ms check interval. Only one inference request runs at a time; slow inference does not queue additional work. Silence is gated. Pausing a take stops inference and clears buffered speech; resuming or loading a script starts with fresh audio. Actual highlight latency includes model processing time and the words needed for a confident match. The timeout for one inference is 20 seconds.
 
 ## Included and downloadable models
 
@@ -49,9 +49,9 @@ The setup script downloads pinned whisper.cpp v1.9.2 binaries and multilingual B
 
 ## Practical recording workflow
 
-1. Choose the correct input device and script language. Automatic detection may be less stable on very short chunks.
+1. Choose the correct input device and script language. Click **Test microphone** for a live dBFS meter, peak hold and clipping indicator, then stop the test. Automatic detection may be less stable on very short chunks.
 2. Use headphones when playing other audio; keep background speech away from the mic.
-3. Start near the passage you intend to read, turn on the mic, select Voice, then Play.
+3. Start near the passage you intend to read, click **Enable voice** above the preview (or select **Voice**), then Play.
 4. Give the recognizer a few words. Watch the recognized transcript and highlighted word.
 5. If you skip a large section, click the new passage or use page navigation. If you go off script, PRMTA should wait rather than scroll blindly.
 6. If a microphone is unplugged, reconnect it and turn capture on again. Permission errors are shown in the studio.

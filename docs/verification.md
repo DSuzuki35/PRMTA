@@ -1,4 +1,20 @@
-# Release verification — PRMTA 0.2.0
+# Release verification — PRMTA
+
+## 0.2.1 update verification
+
+- TypeScript and production build passed. 35 unit/integration tests and 17 browser workflows cover the updated controls and renderer.
+- The font regression test failed on the old renderer (increasing the setting reduced the rendered font from about 17 px to 9 px) and passes after the fix. Additional checks confirm exact 24/48/96 px sizing for short pages and sufficient rendered text at a 3840 × 2160 browser viewport.
+- A 3,000-word navigation fixture produced no observed renderer tasks of 50 ms or longer during the local test. This measures the browser main thread; it does not prove absence of driver-level or whole-system stalls on every machine.
+- Continuous rendering uses a viewport-sized window, with a 512-word minimum. Animation frames stop when the text settles. Loading another script resets the actual visible transform.
+- Fake microphone audio verified the live meter and responsive 500 ms request cadence, bounded windows, one request at a time, and no inference while paused. Unit coverage rejects stale transcripts after navigation from another controller.
+- Simulated gamepad assignment verifies release → press → release, ignores held inputs and disconnects, and rejects duplicate assignments. Physical gamepads remain untested.
+- `node scripts/clipboard-smoke.mjs` clicked Copy link in native Electron and compared the Windows clipboard with the output URL. The pre-test clipboard was restored without logging its contents.
+- The real local Base speech fixture reached position 10 with confidence 1.0 after 7.9 seconds of playback, with no renderer errors (`node scripts/voice-runtime-smoke.mjs`). This is a fixture-progress result, not a per-word latency guarantee.
+- Updated English studio and Settings screenshots were inspected. Native portable verification is recorded below after packaging.
+- The actual Claude Code CLI reviewed these changes. Follow-up fixes include demand-driven animation, viewport capacity, transport revision checks, microphone startup generation guards, wheel thresholds, and assignment safeguards. The follow-up review found no blockers in the scoped fixes; its StrictMode cleanup observation was also applied. Review reports remain local because they include session metadata.
+
+## 0.2.0 baseline verification
+
 
 Verified on Windows x64, 17 November 2026. Source checks use Node 24; the Windows app uses Electron 45.3.3 / Node 24.22.3.
 

@@ -1,3 +1,4 @@
+import { voiceTiming } from '../shared/audio';
 import { api } from './api';
 import type { Preferences } from '../shared/model';
 
@@ -10,7 +11,7 @@ function wav(samples: Float32Array, sampleRate: number): Blob {
   return new Blob([buffer], { type: 'audio/wav' });
 }
 
-export async function startSpeech(preferences: Preferences, onText: (text: string) => void, onStatus: (message: string, level?: number) => void, onEnded: (message: string) => void = () => {}): Promise<() => void> {
+export async function startSpeech(preferences: Preferences, onText: (text: string) => void, onStatus: (message: string, level?: number) => void, onEnded: (message: string) => void = () => {}, captureKey: () => string | null = () => 'active'): Promise<() => void> {
   if (preferences.provider === 'browser') {
     const Recognition = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
     if (!Recognition) throw new Error('This browser does not support speech recognition. Use local Whisper.');
@@ -18,7 +19,7 @@ export async function startSpeech(preferences: Preferences, onText: (text: strin
     recognition.lang = preferences.language === 'en' ? 'en-US' : 'de-DE'; let stopped = false; let retry: ReturnType<typeof setTimeout> | undefined;
     const stop = () => { stopped = true; clearTimeout(retry); recognition.abort(); };
     const fatal = (message: string) => { if (stopped) return; stop(); onEnded(message); };
-    recognition.onresult = (event: any) => { let text = ''; for (let i = Math.max(0, event.resultIndex - 1); i < event.results.length; i++) text += event.results[i][0].transcript + ' '; onText(text); };
+    recognition.onresult = (event: any) => { let text = ''; for (let i = Math.max(0, event.resultIndex - 1); i < event.results.length; i++) text += event.results[i][0].transcript + ' '; if (captureKey()) onText(text); };
     recognition.onerror = (event: any) => { if (['no-speech', 'aborted'].includes(event.error)) onStatus('Waiting for speech'); else fatal(`Browser speech recognition: ${event.error}. Turn the microphone off and on again.`); };
     recognition.onend = () => { if (!stopped) retry = setTimeout(() => { if (!stopped) try { recognition.start(); } catch (error) { fatal(String(error)); } }, 300); };
     recognition.start(); onStatus('Browser listening · may use an online service');
@@ -41,25 +42,30 @@ export async function startSpeech(preferences: Preferences, onText: (text: strin
   // Fixed-size PCM capture. Audio never leaves the loopback Whisper service.
   processor = context.createScriptProcessor(4096, 1, 1); mute = context.createGain(); mute.gain.value = 0;
   source.connect(processor); processor.connect(mute); mute.connect(context.destination);
+  const timing = voiceTiming[preferences.voiceLatency];
+  let key: string | null = null, epoch = 0;
   let chunks: Float32Array[] = []; let total = 0; let busy = false; let lastVoice = 0; let lastMeter = 0;
   for (const track of stream.getAudioTracks()) track.addEventListener('ended', () => fatal('Microphone disconnected. Choose a device and reconnect.'), { once: true });
   context.onstatechange = () => { if (!stopped && context.state !== 'running') onStatus('Audio capture suspended. Turn the microphone off and on again.'); };
   processor.onaudioprocess = event => {
+    const nextKey = captureKey();
+    if (nextKey !== key) { key = nextKey; epoch++; chunks = []; total = 0; lastVoice = 0; }
     const data = new Float32Array(event.inputBuffer.getChannelData(0));
     let energy = 0; for (const sample of data) energy += sample * sample;
     const rms = Math.sqrt(energy / data.length); if (rms > .008) lastVoice = Date.now();
-    if (Date.now() - lastMeter >= 180) { lastMeter = Date.now(); onStatus(rms > .008 ? 'Local Whisper listening' : 'Waiting for speech', Math.round(Math.min(1, rms * 12) * 12) / 12); }
+    if (Date.now() - lastMeter >= 180) { lastMeter = Date.now(); onStatus(!key ? 'Microphone ready · press Play to follow' : rms > .008 ? 'Local Whisper listening' : 'Waiting for speech', Math.round(Math.min(1, rms * 12) * 12) / 12); }
+    if (!key) return;
     chunks.push(data); total += data.length;
-    while (total > context.sampleRate * 6 && chunks.length > 1) total -= chunks.shift()!.length;
+    while (total > context.sampleRate * timing.window && chunks.length > 1) total -= chunks.shift()!.length;
   };
   interval = setInterval(async () => {
-    if (busy || total < context.sampleRate * 1.5 || Date.now() - lastVoice > 2200) return;
-    busy = true; const data = new Float32Array(total); let offset = 0;
+    if (busy || !key || captureKey() !== key || total < context.sampleRate * timing.minimum || Date.now() - lastVoice > 2200) return;
+    busy = true; const requestKey = key, requestEpoch = epoch; const data = new Float32Array(total); let offset = 0;
     for (const chunk of chunks) { data.set(chunk, offset); offset += chunk.length; }
-    try { const response = await api<{ text: string }>('/speech', undefined, wav(data, context.sampleRate)); if (!stopped && response.text) onText(response.text); }
+    try { const response = await api<{ text: string }>('/speech', undefined, wav(data, context.sampleRate)); if (!stopped && epoch === requestEpoch && captureKey() === requestKey && response.text) onText(response.text); }
     catch (error) { if (!stopped) onStatus(String(error)); }
     finally { busy = false; }
-  }, 1800);
+  }, timing.interval);
   return () => { stop(); chunks = []; };
   } catch (error) { stop(); throw error; }
 }

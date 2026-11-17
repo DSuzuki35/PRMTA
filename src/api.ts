@@ -8,7 +8,7 @@ export async function api<T>(path: string, body?: unknown, raw?: Blob | ArrayBuf
     headers: { Authorization: `Bearer ${token}`, ...(raw ? { 'Content-Type': raw instanceof Blob ? raw.type : 'application/octet-stream' } : body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
     body: raw ?? (body !== undefined ? JSON.stringify(body) : undefined),
   });
-  if (!response.ok) { const error = await response.json().catch(() => ({ error: `HTTP ${response.status}` })); throw new Error(error.error || 'Verbindung fehlgeschlagen'); }
+  if (!response.ok) { const error = await response.json().catch(() => ({ error: `HTTP ${response.status}` })); throw new Error(error.error || 'Connection failed'); }
   return response.json();
 }
 export const command = (body: Command) => api<SessionState>('/command', body);
@@ -22,6 +22,7 @@ declare global {
       closeOutputs(): Promise<void>;
       chooseFolder(): Promise<string | null>;
       openBrowser(url: string): Promise<void>;
+      copyText(text: string): Promise<void>;
     };
     OpenKneeboard?: { SetPreferredPixelSize?(width: number, height: number): Promise<void> };
   }

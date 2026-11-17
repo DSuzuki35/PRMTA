@@ -19,7 +19,8 @@ export const appearanceSchema = z.object({
   fontSize: z.number().min(24).max(160), lineHeight: z.number().min(1.1).max(2.5),
   width: z.number().min(25).max(100), guide: z.number().min(15).max(70),
   mirrorX: z.boolean(), mirrorY: z.boolean(), highlight: z.boolean(),
-  dimRead: z.boolean(), transparent: z.boolean(),
+  dimRead: z.boolean(), transparent: z.boolean(), backgroundOpacity: z.number().min(0).max(100).default(100),
+  smoothScroll: z.boolean().default(true),
   font: z.enum(['sans', 'serif', 'mono']), align: z.enum(['left', 'center']),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/), background: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   flow: z.enum(['scroll', 'page']).default('scroll'),
@@ -27,13 +28,14 @@ export const appearanceSchema = z.object({
 export type Appearance = z.infer<typeof appearanceSchema>;
 export const defaultAppearance: Appearance = {
   fontSize: 56, lineHeight: 1.6, width: 78, guide: 35, mirrorX: false, mirrorY: false,
-  highlight: true, dimRead: true, transparent: false, font: 'sans', align: 'left',
+  highlight: true, dimRead: true, transparent: false, backgroundOpacity: 100, smoothScroll: true, font: 'sans', align: 'left',
   color: '#f2f1eb', background: '#101113',
   flow: 'scroll',
 };
 export const preferencesSchema = z.object({
   profiles: z.object({ studio: appearanceSchema, display: appearanceSchema, vr: appearanceSchema }),
   cloudFolder: z.string().max(2000), whisperUrl: z.string().max(2000),
+  voiceLatency: z.enum(['responsive', 'steady']).default('responsive'),
   whisperModel: z.enum(['tiny', 'base', 'small-q5', 'small', 'turbo-q5']).default('base'),
   language: z.enum(['de', 'en', 'auto']), provider: z.enum(['whisper', 'browser']),
   microphoneId: z.string().max(500), countdown: z.number().int().min(0).max(15),
@@ -46,7 +48,7 @@ export const defaultPreferences: Preferences = {
   profiles: { studio: { ...defaultAppearance, fontSize: 42 }, display: { ...defaultAppearance },
     vr: { ...defaultAppearance, fontSize: 48, transparent: true, width: 90 } },
   cloudFolder: '', whisperUrl: 'http://127.0.0.1:8080', language: 'de', provider: 'whisper',
-  whisperModel: 'base',
+  whisperModel: 'base', voiceLatency: 'responsive',
   microphoneId: '', countdown: 3, loop: false, speed: 130,
   gamepadEnabled: false, previousButton: 4, nextButton: 5,
 };
@@ -54,7 +56,7 @@ export type SessionState = {
   script: { id: string; title: string; content: string } | null;
   position: number; playing: boolean; mode: 'manual' | 'timed' | 'voice'; speed: number;
   blackout: boolean; loop: boolean; countdownUntil: number; elapsed: number;
-  updatedAt: number; speech: { transcript: string; confidence: number; status: string };
+  updatedAt: number; transportRevision: number; speech: { transcript: string; confidence: number; status: string };
 };
 export const commandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('play'), countdown: z.number().min(0).max(15).optional() }),
@@ -65,6 +67,6 @@ export const commandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('speed'), speed: z.number().min(20).max(400) }),
   z.object({ type: z.literal('mode'), mode: z.enum(['manual', 'timed', 'voice']) }),
   z.object({ type: z.literal('loop'), loop: z.boolean() }),
-  z.object({ type: z.literal('transcript'), text: z.string().max(2000) }),
+  z.object({ type: z.literal('transcript'), text: z.string().max(2000), transportRevision: z.number().int().nonnegative().optional() }),
 ]);
 export type Command = z.infer<typeof commandSchema>;

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Copy, Monitor, Globe, Glasses, Smartphone, ExternalLink, RefreshCw } from 'lucide-react';
 import { api, type Display, type HostInfo } from './api';
+import { copyText } from './clipboard';
 export function Outputs({ report }: { report: (text: string) => void }) {
   const [info, setInfo] = useState<HostInfo | null>(null); const [displays, setDisplays] = useState<Display[]>([]);
   const refresh = () => { void api<HostInfo>('/info').then(setInfo).catch(e => report(String(e))); void window.desktop?.displays().then(setDisplays).catch(e => report(String(e))); };
   useEffect(() => { refresh(); }, []);
-  const copy = (url: string) => void navigator.clipboard.writeText(url).then(() => report('Link copied.')).catch(() => report('Could not copy. Select the link in the text field.'));
+  const copy = (url: string) => void copyText(url).then(() => report('Link copied. Paste it into your browser or OpenKneeboard.')).catch(error => report(String(error)));
   const open = (url: string) => { if (window.desktop) void window.desktop.openBrowser(url); else window.open(url, '_blank', 'noopener'); };
   return <div className="page-scroll outputs-page"><div className="page-title"><div><div className="eyebrow">ONE SCRIPT. EVERY SCREEN.</div><h1>Your words, everywhere.</h1><p>One take. In sync across displays, browsers and VR.</p></div><button className="button secondary" onClick={refresh}><RefreshCw size={16}/>Refresh</button></div>
     <section className="output-card monitor-card"><div className="output-card-icon"><Monitor size={24}/></div><div className="output-card-content"><span className="eyebrow">DIRECT OUTPUT</span><h2>Displays & Elgato Prompter</h2><p>Select a monitor for a dedicated fullscreen output. Keep controlling PRMTA on your main screen.</p><div className="display-list">{displays.map(d => <button key={d.id} onClick={() => void window.desktop!.output(d.id, 'display').catch(e => report(String(e)))}><Monitor size={32}/><strong>{d.label}</strong><small>{d.width} × {d.height}{d.primary ? ' · Primary display' : ''}</small><span>Open on this display ↗</span></button>)}</div>{!window.desktop && <div className="notice">Display selection is available in the desktop app. In a browser, move the output to the desired screen and enter fullscreen.</div>}<button className="text-button" onClick={() => void window.desktop?.closeOutputs()}>Close display outputs</button></div></section>

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.1 — Responsive controls and rendering
+
+- Bounded continuous text rendering to a viewport-sized word window (512 words minimum), removed the oversized compositor hint and fixed the visible position after loading another script.
+- Added mouse-wheel navigation and a per-output Smooth line transitions option.
+- Fixed inverted page-mode font sizing with stable fitting in studio, browser and VR outputs; explained the size limit in the inspector.
+- Added background opacity from 0–100% without dimming text.
+- Added a live microphone test meter with peak hold, clipping indication and input cleanup.
+- Added Assign button controls requiring a release → press → release cycle; held buttons and disconnects cannot finish assignment.
+- Added Responsive and Steady voice response settings, shorter overlapping audio windows, paused-inference gating and stale-result rejection.
+- Made voice activation visible above the preview.
+- Fixed Copy link in Electron through a restricted native clipboard bridge, with browser fallback and success feedback.
+
 ## 0.2.0 — PRMTA
 
 - Renamed the app from PRMPT to PRMTA with compatibility for existing profiles and cloud revisions.
