@@ -5,7 +5,7 @@ type Segment = { raw: string; gap: string; tail: string; marked: boolean; bold: 
 const Word = memo(function Word({ segment, index, current, read, first, onSeek }: { segment: Segment; index: number; current: boolean; read: boolean; first: boolean; onSeek?: (index: number) => void }) {
   return <span>{first ? segment.gap.trimStart() : segment.gap}<span data-word={index} className={`${current ? 'current-word' : ''} ${read ? 'read-word' : ''} ${segment.marked ? 'marked-word' : ''} ${segment.bold ? 'bold-word' : ''}`} onClick={onSeek ? () => onSeek(index) : undefined}>{segment.raw}</span>{segment.tail}</span>;
 });
-export const WordLayer = memo(function WordLayer({ content, index, start, end, paged, highlight, dimRead, onSeek }: { content: string; index: number; start: number; end: number; paged: boolean; highlight: boolean; dimRead: boolean; onSeek?: (index: number) => void }) {
+export const WordLayer = memo(function WordLayer({ content, index, highlightIndex = index, start, end, paged, highlight, dimRead, onSeek }: { content: string; index: number; highlightIndex?: number; start: number; end: number; paged: boolean; highlight: boolean; dimRead: boolean; onSeek?: (index: number) => void }) {
   const segments = useMemo(() => {
     const words = tokenize(content);
     const marked = [...content.matchAll(/==([\s\S]*?)==/g)].map(m => [m.index, m.index + m[0].length]);
@@ -21,5 +21,5 @@ export const WordLayer = memo(function WordLayer({ content, index, start, end, p
   }, [content]);
   if (!segments.length) return <div className="prompter-empty"><span className="empty-mark">P<span>_</span></span><p>Your words.<br/>Your pace.</p><small>Open a script and load it in the prompter.</small></div>;
   const first = start, last = end;
-  return <>{segments.slice(first, last).map((segment, offset) => { const i = first + offset; return <Word key={i} segment={segment} index={i} current={highlight && i === index} read={dimRead && i < index} first={i === first} onSeek={onSeek}/>; })}{!paged && last >= segments.length && <div className="end-mark">END</div>}</>;
+  return <>{segments.slice(first, last).map((segment, offset) => { const i = first + offset; return <Word key={i} segment={segment} index={i} current={highlight && i === highlightIndex} read={dimRead && i < index} first={i === first} onSeek={onSeek}/>; })}{!paged && last >= segments.length && <div className="end-mark">END</div>}</>;
 });

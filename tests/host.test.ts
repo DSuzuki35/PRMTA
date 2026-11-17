@@ -14,6 +14,7 @@ it('authenticates library access and scopes output/remote capabilities', async (
     expect((await call('/api/scripts', host.tokens.output)).status).toBe(403);
     expect((await call('/api/command', host.tokens.output, { type: 'play' })).status).toBe(403);
     expect((await call('/api/preferences', host.tokens.remote, {})).status).toBe(403);
+    expect((await call('/api/command', host.tokens.remote, { type: 'voiceActivity', active: true, transportRevision: 0 })).status).toBe(403);
     const draft = { id: randomUUID(), title: 'Host test', content: 'one two three four', tags: [] };
     const saved = await (await call('/api/scripts', host.tokens.admin, { draft, expectedHeads: [] })).json();
     expect(saved.title).toBe('Host test');

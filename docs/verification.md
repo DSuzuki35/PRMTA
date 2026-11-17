@@ -1,5 +1,13 @@
 # Release verification — PRMTA
 
+## 0.2.4 update verification
+
+- TypeScript/production build, 56 unit/integration tests and 24 browser workflows passed. New coverage exercises waveform attack/release, steady room-noise adaptation, learned pace, stale audio, the two-word bound, correction and preserving correct predictions.
+- Session tests keep confirmed progress separate from the preview and reject stale activity after a fresh match following navigation. Browser tests verify studio/output synchronization, no predicted read-text dimming, correction on mismatch, page boundaries and the per-profile opt-out.
+- The real bundled Base audio fixture reached position 10 with confidence 1.0 after 7.9 seconds, observed 34 activity heartbeats and a one-word visual lead, with no renderer errors. This demonstrates the waveform-to-preview path; it is not a per-word latency guarantee or a noisy-room recognition benchmark.
+- The actual Claude Code CLI reviewed the implementation and follow-up fixes. The follow-up found no blockers or regressions. The code and tests address unnecessary rewinds on correct predictions, stable background noise and vacuous assertions. Private review metadata remains outside the repository.
+- Updated native screenshots, including the Reading area controls, were inspected. Automated accessibility and long-script rendering regressions remain passing. Energy-based voice gating is deliberately bounded and is not a semantic speech detector.
+
 ## 0.2.3 update verification
 
 - Production build, 48 unit/integration tests and 22 browser workflows passed for the UI pass and voice continuity guard. The 0.2.3 portable passed extraction, sample loading, bundled voice setup and clean shutdown. SHA-256: `ebfd777037a7a1dcda390c0e252c114114f365c0218cc07dfa1151a10d586963`.

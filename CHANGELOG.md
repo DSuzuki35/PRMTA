@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.4 - Voice-aware highlight pacing
+
+- Added optional smooth voice highlighting per output profile, enabled by default for local Whisper.
+- Uses the microphone RMS envelope and recent confirmed speaking pace (a rolling two-minute window) to preview at most two words between recognition results.
+- Stops advancing during silence or missing audio; corrects against new recognition and withdraws stale guesses after 2.5 seconds without a fresh match.
+- Keeps the confirmed script position, read-text dimming and page changes independent of visual predictions. Manual navigation and take changes reset prediction.
+- Synchronizes the visual estimate across studio, display/browser and VR outputs without extra inference requests.
+- Increased the gap before the logo underscore and removed the inactive workspace menu dots.
+
 ## 0.2.3 - UI accessibility and voice continuity
 
 - Removed decorative long dashes from window/browser titles, duplicate names and the end marker.

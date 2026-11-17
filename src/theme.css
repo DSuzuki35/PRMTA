@@ -6,7 +6,7 @@
 :root{--bg:#0f0f12;--panel:#1a1b1f;--line:#32343c;--muted:#9da0aa;--accent:#a79bf0;--soft:#221e38;--primary:#7059dd;--control-border:#43454f;--sidebar:232px;font-family:'Inter Variable',sans-serif;color:#f4f4f6;background:var(--bg);font-size:14px}
 html.output-root,body.output-body{background:transparent}
 h1,h2,h3,.brand{font-family:'Archivo Variable',sans-serif}h1{font-stretch:115%;font-weight:650;letter-spacing:-.03em}.brand{font-size:32px;letter-spacing:-1.6px;font-weight:800}h2{font-size:20px}h3{font-size:14px}
-.brand>span{display:inline-block;width:14px;height:3px;margin-left:4px;font-size:0;line-height:0;overflow:hidden;vertical-align:baseline;background:var(--accent)}
+.brand>span{display:inline-block;width:14px;height:3px;margin-left:8px;font-size:0;line-height:0;overflow:hidden;vertical-align:baseline;background:var(--accent)}
 button,input,select,textarea{transition:background-color 140ms ease,border-color 140ms ease,color 140ms ease}input,select,textarea{border-radius:12px;border-color:var(--control-border);background:var(--bg)}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline-color:var(--accent)}
 .button{border-radius:12px;min-height:40px;font-size:12px}.button.primary,.play-button{background:var(--primary);color:#fff;border-color:var(--primary)}.button.primary:hover,.play-button:hover{background:#5f4ad0}.button.secondary{background:transparent;border-color:var(--control-border);color:#f4f4f6}.button.secondary:hover{background:var(--soft);border-color:var(--primary)}.button.small{font-size:12px;min-height:34px}
 .sidebar nav>button,.bottom-nav{font-size:13px;border-radius:12px}.folder-nav>button{font-size:12px!important}.sidebar{background:var(--bg);padding-top:28px}.workspace-switch{font-size:13px;border-radius:12px}.workspace-switch small{letter-spacing:.7px}.workspace-avatar{background:var(--soft);border-color:var(--control-border)}.local-card{border-radius:16px}.local-card strong,.local-card p,.local-card button{font-size:11px}.connection-pill{color:var(--muted)}.connection-pill i,.status-dot{background:#22c55e}
@@ -53,3 +53,5 @@ dialog::backdrop{background:#080b0dcc;backdrop-filter:blur(8px)}
 @media(forced-colors:active){.switch{background:Canvas;border-color:ButtonText}.switch:after{background:ButtonText}.toggle-field input:checked+.switch{background:Highlight}.toggle-field input:checked+.switch:after{background:HighlightText}.button,.icon-button{border:1px solid ButtonText}}
 @media(max-width:900px){.appearance-panel .two-fields{gap:16px}.assignment-control{flex-wrap:wrap}.studio-heading>.button-row{max-width:none}.stage-footer>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:12px}}
 .end-mark{color:var(--muted)}
+
+.prompter-text [data-word]{transition:color 140ms ease,opacity 140ms ease}

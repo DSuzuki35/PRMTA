@@ -70,8 +70,11 @@ export async function createHost(options: { dataDir: string; port?: number; stat
   });
   app.post('/api/command', control, (req: AuthRequest, res) => {
     const command = commandSchema.parse(req.body);
-    if (command.type === 'transcript' && req.role !== 'admin') { res.sendStatus(403); return; }
+    if (['transcript', 'voiceActivity'].includes(command.type) && req.role !== 'admin') { res.sendStatus(403); return; }
     session.command(command.type === 'play' && command.countdown === undefined ? { ...command, countdown: preferences.countdown } : command);
+    // Audio heartbeats are small and frequent. The existing ticker publishes the
+    // visual position; never echo a potentially book-length script on each beat.
+    if (command.type === 'voiceActivity') { res.json(null); return; }
     broadcast('tick'); res.json(session.snapshot());
   });
   app.post('/api/preferences', admin, (req, res) => {

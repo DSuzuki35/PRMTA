@@ -21,6 +21,7 @@ export const appearanceSchema = z.object({
   mirrorX: z.boolean(), mirrorY: z.boolean(), highlight: z.boolean(),
   dimRead: z.boolean(), transparent: z.boolean(), backgroundOpacity: z.number().min(0).max(100).default(100),
   smoothScroll: z.boolean().default(true),
+  smoothVoice: z.boolean().default(true),
   previewNextLine: z.boolean().default(false),
   font: z.enum(['sans', 'serif', 'mono']), align: z.enum(['left', 'center']),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/), background: z.string().regex(/^#[0-9a-fA-F]{6}$/),
@@ -31,7 +32,7 @@ export const defaultAppearance: Appearance = {
   fontSize: 56, lineHeight: 1.6, width: 78, guide: 35, mirrorX: false, mirrorY: false,
   highlight: true, dimRead: true, transparent: false, backgroundOpacity: 100, smoothScroll: true, previewNextLine: false, font: 'sans', align: 'left',
   color: '#f2f1eb', background: '#101113',
-  flow: 'scroll',
+  flow: 'scroll', smoothVoice: true,
 };
 export const preferencesSchema = z.object({
   profiles: z.object({ studio: appearanceSchema, display: appearanceSchema, vr: appearanceSchema }),
@@ -56,6 +57,7 @@ export const defaultPreferences: Preferences = {
 export type SessionState = {
   script: { id: string; title: string; content: string } | null;
   position: number; playing: boolean; mode: 'manual' | 'timed' | 'voice'; speed: number;
+  voiceHighlight?: number;
   blackout: boolean; loop: boolean; countdownUntil: number; elapsed: number;
   updatedAt: number; transportRevision: number; speech: { transcript: string; confidence: number; status: string };
 };
@@ -69,5 +71,6 @@ export const commandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('mode'), mode: z.enum(['manual', 'timed', 'voice']) }),
   z.object({ type: z.literal('loop'), loop: z.boolean() }),
   z.object({ type: z.literal('transcript'), text: z.string().max(2000), transportRevision: z.number().int().nonnegative().optional() }),
+  z.object({ type: z.literal('voiceActivity'), active: z.boolean(), transportRevision: z.number().int().nonnegative() }),
 ]);
 export type Command = z.infer<typeof commandSchema>;

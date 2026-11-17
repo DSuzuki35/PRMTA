@@ -4,7 +4,7 @@ PRMTA is a Windows teleprompter studio with a local script library. The interfac
 
 ## Your first take
 
-1. Start `PRMTA-0.2.3-Windows-x64.exe`. Keep the application open during your take.
+1. Start `PRMTA-0.2.4-Windows-x64.exe`. Keep the application open during your take.
 2. Click **Try a sample**, or **Create script** to write your own.
 3. In **Library**, name the script, paste your text and click **Load in prompter**. Editing autosaves after a short pause. The save indicator confirms success.
 4. Choose **Auto**, **Voice**, or **Manual**. Press **Play** or Space.
@@ -49,6 +49,8 @@ Draft backups belong to the studio URL's origin. If port 4317 is occupied and PR
 | Manual | Move with clicks, the progress slider, keyboard, remote or controller. |
 
 There are three independent appearance profiles: **Studio preview**, **External display / browser**, and **VR / OpenKneeboard**. Select the profile in the inspector to edit its font size, line height, text width, reading line, alignment, colors, highlighting, dimming, mirroring and background opacity (0–100%). Background opacity does not fade the text. Transparent browser/OBS/VR output is supported; native monitor windows retain an opaque Windows surface.
+
+**Smooth voice highlighting** under **Reading area** uses local microphone activity and your recent speaking pace to preview up to two words between Whisper results. Recognition corrects the estimate; silence stops its advance. The option is independent for each profile and does not change the confirmed position, mark guesses as read or turn a page early. It requires **Highlight current word** and local Whisper.
 
 **Continuous at reading line** keeps the current word near the chosen vertical guide. Set the reading line to 50% for the middle. **Page by page** keeps the current page visible and changes pages as voice or timed playback progresses. Current-word highlighting works in either mode. In page mode, enable **Preview next line** to see the first line of the next page in muted gray below the current page. It is included in the fit calculation and disappears on the last page. **Smooth line transitions** in continuous mode animates line changes during playback; switch it off for immediate positioning. Loading a script always pauses at its first word, including the visible scroll position.
 

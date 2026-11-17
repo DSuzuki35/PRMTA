@@ -1,4 +1,5 @@
 import { voiceTiming } from '../shared/audio';
+import { VoiceActivityGate } from '../shared/voice-pacing';
 import { api } from './api';
 import type { Preferences } from '../shared/model';
 
@@ -11,7 +12,7 @@ function wav(samples: Float32Array, sampleRate: number): Blob {
   return new Blob([buffer], { type: 'audio/wav' });
 }
 
-export async function startSpeech(preferences: Preferences, onText: (text: string) => void, onStatus: (message: string, level?: number) => void, onEnded: (message: string) => void = () => {}, captureKey: () => string | null = () => 'active'): Promise<() => void> {
+export async function startSpeech(preferences: Preferences, onText: (text: string) => void, onStatus: (message: string, level?: number) => void, onEnded: (message: string) => void = () => {}, captureKey: () => string | null = () => 'active', onActivity: (active: boolean) => void = () => {}): Promise<() => void> {
   if (preferences.provider === 'browser') {
     const Recognition = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
     if (!Recognition) throw new Error('This browser does not support speech recognition. Use local Whisper.');
@@ -44,15 +45,18 @@ export async function startSpeech(preferences: Preferences, onText: (text: strin
   source.connect(processor); processor.connect(mute); mute.connect(context.destination);
   const timing = voiceTiming[preferences.voiceLatency];
   let key: string | null = null, epoch = 0;
+  let activity = new VoiceActivityGate(), lastActivity: boolean | undefined, activitySentAt = 0;
   let chunks: Float32Array[] = []; let total = 0; let busy = false; let lastVoice = 0; let lastMeter = 0;
   for (const track of stream.getAudioTracks()) track.addEventListener('ended', () => fatal('Microphone disconnected. Choose a device and reconnect.'), { once: true });
   context.onstatechange = () => { if (!stopped && context.state !== 'running') onStatus('Audio capture suspended. Turn the microphone off and on again.'); };
   processor.onaudioprocess = event => {
     const nextKey = captureKey();
-    if (nextKey !== key) { key = nextKey; epoch++; chunks = []; total = 0; lastVoice = 0; }
+    if (nextKey !== key) { key = nextKey; epoch++; chunks = []; total = 0; lastVoice = 0; activity = new VoiceActivityGate(); lastActivity = undefined; }
     const data = new Float32Array(event.inputBuffer.getChannelData(0));
     let energy = 0; for (const sample of data) energy += sample * sample;
     const rms = Math.sqrt(energy / data.length); if (rms > .008) lastVoice = Date.now();
+    const now = Date.now(), active = activity.sample(rms, now);
+    if (key && (active !== lastActivity || now - activitySentAt >= 180)) { onActivity(active); lastActivity = active; activitySentAt = now; }
     if (Date.now() - lastMeter >= 180) { lastMeter = Date.now(); onStatus(!key ? 'Microphone ready · press Play to follow' : rms > .008 ? 'Local Whisper listening' : 'Waiting for speech', Math.round(Math.min(1, rms * 12) * 12) / 12); }
     if (!key) return;
     chunks.push(data); total += data.length;

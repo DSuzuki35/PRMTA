@@ -15,6 +15,8 @@ try {
   mkdirSync('artifacts', { recursive: true });
   await page.locator('.sidebar .brand').screenshot({ path: 'artifacts/wordmark.png' });
   await page.screenshot({ path: 'docs/images/studio.png' });
+  await page.getByRole('switch', { name: 'Smooth voice highlighting', exact: true }).scrollIntoViewIfNeeded();
+  await page.locator('.settings-group').filter({ has: page.getByRole('heading', { name: 'Reading area', exact: true }) }).screenshot({ path: 'docs/images/voice-highlighting.png' });
   await page.getByLabel('Text flow').selectOption('page');
   await page.getByText('Preview next line', { exact: true }).click();
   await page.locator('.next-page-preview').waitFor();
@@ -31,5 +33,5 @@ try {
   await page.screenshot({ path: 'docs/images/settings.png', mask: [page.locator('.storage-note code')], maskColor: '#25262c' });
   await page.getByLabel('Local model').scrollIntoViewIfNeeded();
   await page.screenshot({ path: 'docs/images/models.png', mask: [page.locator('.storage-note code')], maskColor: '#25262c' });
-  console.log('Created six English screenshots with private links and paths masked.');
+  console.log('Created seven English screenshots with private links and paths masked.');
 } finally { await app.close(); rmSync(dir, { recursive: true, force: true }); }

@@ -4,6 +4,18 @@ PRMTA separates speech recognition from script following. Whisper turns short mi
 
 Recognition is local when using the default Whisper provider. The microphone is resampled to 16 kHz mono WAV and sent over loopback HTTP to whisper.cpp. The default **Responsive** setting keeps approximately three seconds of overlapping audio and checks every 500 ms after the first second of speech. **Steady** uses five seconds and a 1,000 ms check interval. Only one inference request runs at a time; slow inference does not queue additional work. Silence is gated. Pausing a take stops inference and clears buffered speech; resuming or loading a script starts with fresh audio. Actual highlight latency includes model processing time and the words needed for a confident match. The timeout for one inference is 20 seconds.
 
+## Smooth voice highlighting
+
+![Voice highlighting controls](images/voice-highlighting.png)
+
+In the studio inspector, select an **Output profile**, then use **Reading area > Smooth voice highlighting**. It is enabled by default, independently for studio, display/browser and VR. **Highlight current word** must also be enabled. Browser recognition retains recognition-driven highlighting because it does not supply the local waveform gate.
+
+With local Whisper, PRMTA monitors the microphone waveform energy (RMS) with a short attack/release gate and noise-floor tracking, including stable room noise. After a script match, it can preview up to two upcoming words while audio remains active. It learns words per second from confirmed progress and voiced time over the last two minutes of the current take. Until enough observations exist, it uses a conservative initial pace. Very short recognition bursts and implausible rate samples do not train the estimate.
+
+The estimate stops advancing during a pause, and lost audio heartbeats expire after 350 ms. New recognition corrects it, including moving the visual highlight back if the guess was wrong. After 2.5 seconds without a fresh matching result, it returns to the confirmed word. Reset, seek, mode changes and pause/resume clear the estimate and pace history. This is a visual aid: predicted words are not marked as read, do not steer speech matching and cannot turn a page. The reading guide and page changes still follow confirmed progress.
+
+This is an energy gate, not a semantic voice-activity model: sustained background noise can look like speech. The two-word limit, recent-match requirement and corrections keep that effect bounded. It does not eliminate Whisper processing latency. No additional audio recording, recognition request or external service is introduced.
+
 ## Included and downloadable models
 
 The Windows release includes multilingual **Base** and the whisper.cpp CPU server. Additional models download only when requested in Settings, into the application profile's `models` folder. Files are installed after exact size and SHA-256 verification. A failed download can be retried; automatic resume is not implemented.

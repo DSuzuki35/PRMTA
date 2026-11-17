@@ -11,7 +11,7 @@ export async function api<T>(path: string, body?: unknown, raw?: Blob | ArrayBuf
   if (!response.ok) { const error = await response.json().catch(() => ({ error: `HTTP ${response.status}` })); throw new Error(error.error || 'Connection failed'); }
   return response.json();
 }
-export const command = (body: Command) => api<SessionState>('/command', body);
+export const command = (body: Command) => api<SessionState | null>('/command', body);
 export type StateMessage = { type: string; session?: SessionState; preferences?: Preferences };
 export type Display = { id: number; label: string; width: number; height: number; primary: boolean };
 declare global {

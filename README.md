@@ -11,7 +11,7 @@
 - **External displays:** dedicated fullscreen output on any Windows monitor, including Elgato Prompter.
 - **Browser and OBS:** clean, synchronized output with adjustable background opacity and mirroring.
 - **VR:** transparent OpenKneeboard Web Dashboard output with an independent appearance profile.
-- **Local voice follow:** bundled multilingual Whisper Base, forgiving nearby script alignment, current-word highlighting, and selectable Tiny, Small, quantized Small and quantized Large v3 Turbo models.
+- **Local voice follow:** bundled multilingual Whisper Base, forgiving nearby script alignment, waveform-gated predictive word highlighting, and selectable Tiny, Small, quantized Small and quantized Large v3 Turbo models.
 - **Your pace:** timed WPM scrolling, voice following or manual navigation; continuous reading-line and page-by-page layouts, optional smooth line transitions and wheel navigation.
 - **Script library:** UTF-8 TXT revisions, SQLite indexing, folders, tags, favorites, search, autosave, draft recovery, version history and reversible trash.
 - **Cloud folder sync:** use a local Dropbox, OneDrive or iCloud Drive folder; preserve revisions and surface conflicting edits.
@@ -20,7 +20,7 @@
 
 ## Get started
 
-1. Download `PRMTA-0.2.3-Windows-x64.exe` from [Releases](https://github.com/DSuzuki35/PRMTA/releases/latest).
+1. Download `PRMTA-0.2.4-Windows-x64.exe` from [Releases](https://github.com/DSuzuki35/PRMTA/releases/latest).
 2. Run it and choose **Try a sample** or **Create script**.
 3. Press **Play**. For voice following, click **Enable voice** above the preview, then Play.
 4. In **Outputs**, choose an external monitor, copy a browser link or add the VR link to OpenKneeboard.

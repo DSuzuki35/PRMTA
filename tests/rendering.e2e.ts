@@ -10,6 +10,49 @@ test.afterAll(async () => { await host.close(); rmSync(dir, { recursive: true, f
 const post = (path: string, body: unknown) => fetch(`${host.origin}/api${path}`, { method: 'POST', headers: { Authorization: `Bearer ${host.tokens.admin}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 test.beforeEach(async () => { await post('/preferences', structuredClone(defaultPreferences)); });
 
+test('voice preview follows fresh audio on both surfaces and corrects without marking guesses as read', async ({ page, context }) => {
+  host.session.load({ id: 'voice', title: 'Voice', content: 'one two three four five six seven eight nine ten' });
+  await page.goto(host.url('admin'));
+  const output = await context.newPage(); await output.goto(host.url('output'));
+  await post('/command', { type: 'mode', mode: 'voice' }); await post('/command', { type: 'play', countdown: 0 });
+  await post('/command', { type: 'transcript', text: 'one two three' });
+  for (let n = 0; n < 9; n++) {
+    await post('/command', { type: 'voiceActivity', active: true, transportRevision: host.session.state.transportRevision });
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  await post('/command', { type: 'voiceActivity', active: false, transportRevision: host.session.state.transportRevision });
+  for (const surface of [page, output]) {
+    await expect(surface.locator('.current-word')).toHaveAttribute('data-word', /^[45]$/);
+    await expect(surface.locator('[data-word="3"]')).not.toHaveClass(/read-word/);
+  }
+  expect(host.session.state.position).toBe(3);
+  await post('/command', { type: 'transcript', text: 'unrelated purple mountain sunshine' });
+  for (const surface of [page, output]) await expect(surface.locator('.current-word')).toHaveAttribute('data-word', '3');
+  await post('/command', { type: 'pause' });
+});
+
+test('voice preview cannot turn a page and can be disabled per output profile', async ({ page }) => {
+  host.session.load({ id: 'voice-page', title: 'Voice page', content: 'one two three four.\n---\nfive six seven eight nine ten.' });
+  const preferences = structuredClone(defaultPreferences); preferences.profiles.display.flow = 'page';
+  await post('/preferences', preferences); await page.goto(host.url('output'));
+  await post('/command', { type: 'mode', mode: 'voice' }); await post('/command', { type: 'play', countdown: 0 });
+  await post('/command', { type: 'transcript', text: 'one two three' });
+  for (let n = 0; n < 8; n++) {
+    await post('/command', { type: 'voiceActivity', active: true, transportRevision: host.session.state.transportRevision });
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  expect(host.session.state.voiceHighlight).toBeGreaterThan(3);
+  await expect(page.locator('.current-word')).toHaveAttribute('data-word', '3');
+  await expect(page.locator('.page-number')).toHaveText('1 / 2');
+  preferences.profiles.display.flow = 'scroll';
+  await post('/preferences', preferences);
+  await expect(page.locator('.current-word')).toHaveAttribute('data-word', /^[45]$/);
+  preferences.profiles.display.smoothVoice = false;
+  await post('/preferences', preferences);
+  await expect(page.locator('.current-word')).toHaveAttribute('data-word', '3');
+  await post('/command', { type: 'pause' });
+});
+
 test('pages keep their ending punctuation and optionally preview one muted next line', async ({ page, context }) => {
   host.session.load({ id: 'punctuation', title: 'Punctuation', content: '“This is the end.”\n---\nThere is another sentence. '.repeat(2) });
   await page.goto(host.url('admin')); await page.getByLabel('Output profile').selectOption('display');
