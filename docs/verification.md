@@ -2,7 +2,7 @@
 
 ## 0.2.2 update verification
 
-- Production build, 42 unit/integration tests and 18 Chromium workflows passed.
+- Production build, 42 unit/integration tests and 18 Chromium workflows passed locally and in Windows CI. The portable 0.2.2 executable passed extraction, sample loading, bundled voice setup and clean shutdown. SHA-256: `699d143caa00f4e21489ba3b815b58a8cc1327ddbdaf6747079be418935f4cf5`.
 - New regressions cover whole-sentence packing, clause fallback in overlong sentences, decimal separators, quotations, unpunctuated passages and explicit page breaks.
 - Browser tests verify preserved ending punctuation, a one-line muted next-page preview, profile synchronization, and hiding the preview on the final page.
 - A native Electron screenshot of the page preview was rendered and inspected. Claude Code found no hard blockers; its observations about single-letter sentence endings, clock times and preferring sentence endings before long clauses were addressed with regression tests.
