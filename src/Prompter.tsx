@@ -110,6 +110,7 @@ export function Prompter({ session, appearance, onSeek, fullscreen = false }: { 
     <div className="mirror-plane" style={{ transform: `scale(${appearance.mirrorX ? -1 : 1},${appearance.mirrorY ? -1 : 1})` }}>
       <div ref={text} className={`prompter-text font-${appearance.font}`} style={{ left: `${(100 - appearance.width) / 2}%`, width: `${appearance.width}%`, fontSize: appearance.fontSize, lineHeight: appearance.lineHeight, textAlign: appearance.align }}>
         <WordLayer content={content} index={index} start={start} end={end} paged={paged} highlight={appearance.highlight} dimRead={appearance.dimRead} onSeek={onSeek}/>
+        {paged && appearance.previewNextLine && pages[pageIndex + 1] && <div className="next-page-preview" aria-hidden="true" style={{ height: `${appearance.lineHeight}em` }}><WordLayer content={content} index={-1} start={pages[pageIndex + 1].start} end={Math.min(pages[pageIndex + 1].end, pages[pageIndex + 1].start + 100)} paged highlight={false} dimRead={false}/></div>}
       </div>
     </div>
     {paged && page && <div className="page-number">{pageIndex + 1} / {pages.length}</div>}

@@ -1,5 +1,12 @@
 # Release verification — PRMTA
 
+## 0.2.2 update verification
+
+- Production build, 42 unit/integration tests and 18 Chromium workflows passed.
+- New regressions cover whole-sentence packing, clause fallback in overlong sentences, decimal separators, quotations, unpunctuated passages and explicit page breaks.
+- Browser tests verify preserved ending punctuation, a one-line muted next-page preview, profile synchronization, and hiding the preview on the final page.
+- A native Electron screenshot of the page preview was rendered and inspected. Claude Code found no hard blockers; its observations about single-letter sentence endings, clock times and preferring sentence endings before long clauses were addressed with regression tests.
+
 ## 0.2.1 update verification
 
 - TypeScript and production build passed. 35 unit/integration tests and 17 browser workflows cover the updated controls and renderer.

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.2 — Natural page endings
+
+- Automatic pages now keep whole sentences together around a 60-word target; overlong sentences may split at clause punctuation instead of arbitrary words.
+- Kept unpunctuated passages intact and preserved manually placed page breaks.
+- Fixed punctuation and quotation marks disappearing at page boundaries.
+- Added an optional muted, single-line preview of the next page, configured separately per output profile and included in page fitting.
+
 ## 0.2.1 — Responsive controls and rendering
 
 - Bounded continuous text rendering to a viewport-sized word window (512 words minimum), removed the oversized compositor hint and fixed the visible position after loading another script.

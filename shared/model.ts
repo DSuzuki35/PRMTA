@@ -21,6 +21,7 @@ export const appearanceSchema = z.object({
   mirrorX: z.boolean(), mirrorY: z.boolean(), highlight: z.boolean(),
   dimRead: z.boolean(), transparent: z.boolean(), backgroundOpacity: z.number().min(0).max(100).default(100),
   smoothScroll: z.boolean().default(true),
+  previewNextLine: z.boolean().default(false),
   font: z.enum(['sans', 'serif', 'mono']), align: z.enum(['left', 'center']),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/), background: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   flow: z.enum(['scroll', 'page']).default('scroll'),
@@ -28,7 +29,7 @@ export const appearanceSchema = z.object({
 export type Appearance = z.infer<typeof appearanceSchema>;
 export const defaultAppearance: Appearance = {
   fontSize: 56, lineHeight: 1.6, width: 78, guide: 35, mirrorX: false, mirrorY: false,
-  highlight: true, dimRead: true, transparent: false, backgroundOpacity: 100, smoothScroll: true, font: 'sans', align: 'left',
+  highlight: true, dimRead: true, transparent: false, backgroundOpacity: 100, smoothScroll: true, previewNextLine: false, font: 'sans', align: 'left',
   color: '#f2f1eb', background: '#101113',
   flow: 'scroll',
 };

@@ -4,7 +4,7 @@ PRMTA is a Windows teleprompter studio with a local script library. The interfac
 
 ## Your first take
 
-1. Start `PRMTA-0.2.1-Windows-x64.exe`. Keep the application open during your take.
+1. Start `PRMTA-0.2.2-Windows-x64.exe`. Keep the application open during your take.
 2. Click **Try a sample**, or **Create script** to write your own.
 3. In **Library**, name the script, paste your text and click **Load in prompter**. Editing autosaves after a short pause. The save indicator confirms success.
 4. Choose **Auto**, **Voice**, or **Manual**. Press **Play** or Space.
@@ -28,7 +28,7 @@ This starts a new page.
 
 `==highlight==` marks important words, and `**bold**` adds emphasis. A line containing only `---` or `\---` starts a page; it is a page break rather than an ordinary line break. Use Enter for a line break and a blank line for a paragraph. Heading markers such as `# ` are hidden in the prompter. Other Markdown is treated as text. These markers remain intact in TXT exports.
 
-Without explicit page separators, page mode divides the script into roughly 60-word chunks. In page mode, Font size is an upper limit: long pages shrink to the largest size that fits each output. Increasing the limit never makes text smaller. A size plateau means the page is full; add a page break or widen the reading area to make its text larger. Each browser source fits its own viewport dimensions.
+Without explicit page separators, page mode packs complete sentences into pages of roughly 60 words. An overlong sentence can split at a comma, semicolon, colon or dash; text without usable punctuation stays intact. Common abbreviations and numeric decimal separators do not create page breaks. Explicit separators take precedence. In page mode, Font size is an upper limit: long pages shrink to the largest size that fits each output. Increasing the limit never makes text smaller. A size plateau means the page is full; add a page break or widen the reading area to make its text larger. Each browser source fits its own viewport dimensions.
 
 Use folders, comma-separated tags, favorites and search to organize scripts. Production notes do not appear in the output. Trash is reversible. **History** shows previous revisions. Restoring a revision creates a new version; it does not erase the old versions. Duplicate a script to create an independent copy.
 
@@ -50,9 +50,11 @@ Draft backups belong to the studio URL's origin. If port 4317 is occupied and PR
 
 There are three independent appearance profiles: **Studio preview**, **External display / browser**, and **VR / OpenKneeboard**. Select the profile in the inspector to edit its font size, line height, text width, reading line, alignment, colors, highlighting, dimming, mirroring and background opacity (0–100%). Background opacity does not fade the text. Transparent browser/OBS/VR output is supported; native monitor windows retain an opaque Windows surface.
 
-**Continuous at reading line** keeps the current word near the chosen vertical guide. Set the reading line to 50% for the middle. **Page by page** keeps the current page visible and changes pages as voice or timed playback progresses. Current-word highlighting works in either mode. **Smooth line transitions** in continuous mode animates line changes during playback; switch it off for immediate positioning. Loading a script always pauses at its first word, including the visible scroll position.
+**Continuous at reading line** keeps the current word near the chosen vertical guide. Set the reading line to 50% for the middle. **Page by page** keeps the current page visible and changes pages as voice or timed playback progresses. Current-word highlighting works in either mode. In page mode, enable **Preview next line** to see the first line of the next page in muted gray below the current page. It is included in the fit calculation and disappears on the last page. **Smooth line transitions** in continuous mode animates line changes during playback; switch it off for immediate positioning. Loading a script always pauses at its first word, including the visible scroll position.
 
 Scroll the mouse wheel over the preview to navigate, or click a word to jump there. Blackout hides output while preserving the take. The elapsed timer counts active playback; remaining time is an estimate using the current WPM. Countdown and loop are configured in Settings. Pausing stops progress; Reset returns to the beginning.
+
+![Page mode with a muted preview of the next line](images/page-preview.png)
 
 ## Elgato Prompter and external displays
 

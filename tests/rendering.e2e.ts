@@ -10,6 +10,23 @@ test.afterAll(async () => { await host.close(); rmSync(dir, { recursive: true, f
 const post = (path: string, body: unknown) => fetch(`${host.origin}/api${path}`, { method: 'POST', headers: { Authorization: `Bearer ${host.tokens.admin}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 test.beforeEach(async () => { await post('/preferences', structuredClone(defaultPreferences)); });
 
+test('pages keep their ending punctuation and optionally preview one muted next line', async ({ page, context }) => {
+  host.session.load({ id: 'punctuation', title: 'Punctuation', content: '“This is the end.”\n---\nThere is another sentence. '.repeat(2) });
+  await page.goto(host.url('admin')); await page.getByLabel('Output profile').selectOption('display');
+  await page.getByLabel('Text flow').selectOption('page');
+  const output = await context.newPage(); await output.goto(host.url('output'));
+  await expect(output.locator('.page-number')).toHaveText('1 / 3');
+  await expect(output.locator('.prompter-text')).toContainText('“This is the end.”');
+  await expect(output.locator('.next-page-preview')).toHaveCount(0);
+  await page.getByText('Preview next line', { exact: true }).click();
+  await expect(output.locator('.next-page-preview')).toContainText('There is another sentence.');
+  await expect(output.locator('.next-page-preview')).toHaveCSS('opacity', '0.45');
+  const geometry = await output.locator('.next-page-preview').evaluate(el => ({ height: el.clientHeight, line: parseFloat(getComputedStyle(el).lineHeight) }));
+  expect(Math.abs(geometry.height - geometry.line)).toBeLessThan(2);
+  await post('/command', { type: 'seek', position: 12 });
+  await expect(output.locator('.next-page-preview')).toHaveCount(0);
+});
+
 test('page fitting never reverses font size in studio or browser output', async ({ page, context }) => {
   host.session.load({ id: 'fit', title: 'Fit', content: `${'A sentence with several words to fit on this page. '.repeat(12)}\n---\nLast page.` });
   await page.goto(host.url('admin'));

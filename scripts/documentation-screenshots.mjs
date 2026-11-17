@@ -15,6 +15,11 @@ try {
   mkdirSync('artifacts', { recursive: true });
   await page.locator('.sidebar .brand').screenshot({ path: 'artifacts/wordmark.png' });
   await page.screenshot({ path: 'docs/images/studio.png' });
+  await page.getByLabel('Text flow').selectOption('page');
+  await page.getByText('Preview next line', { exact: true }).click();
+  await page.locator('.next-page-preview').waitFor();
+  await page.locator('.stage-frame').screenshot({ path: 'docs/images/page-preview.png' });
+  await page.getByLabel('Text flow').selectOption('scroll');
   await page.getByRole('button', { name: 'Library', exact: true }).click();
   await page.getByRole('button', { name: /Your words. Your pace./ }).first().click();
   await page.screenshot({ path: 'docs/images/library.png' });
@@ -26,5 +31,5 @@ try {
   await page.screenshot({ path: 'docs/images/settings.png', mask: [page.locator('.storage-note code')], maskColor: '#25262c' });
   await page.getByLabel('Local model').scrollIntoViewIfNeeded();
   await page.screenshot({ path: 'docs/images/models.png', mask: [page.locator('.storage-note code')], maskColor: '#25262c' });
-  console.log('Created five English screenshots with private links and paths masked.');
+  console.log('Created six English screenshots with private links and paths masked.');
 } finally { await app.close(); rmSync(dir, { recursive: true, force: true }); }
