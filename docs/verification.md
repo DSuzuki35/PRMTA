@@ -2,6 +2,8 @@
 
 ## 0.2.4 update verification
 
+- Windows CI passed for release source `d0ae10f`. The final portable executable passed extraction, sample loading, one-button bundled voice setup, the real Base audio fixture and clean shutdown. SHA-256: `eb3caebad53db9a6673b3d7a31bf40d5e549a778fbb222560e8507e4faa3ef73`.
+
 - TypeScript/production build, 56 unit/integration tests and 24 browser workflows passed. New coverage exercises waveform attack/release, steady room-noise adaptation, learned pace, stale audio, the two-word bound, correction and preserving correct predictions.
 - Session tests keep confirmed progress separate from the preview and reject stale activity after a fresh match following navigation. Browser tests verify studio/output synchronization, no predicted read-text dimming, correction on mismatch, page boundaries and the per-profile opt-out.
 - The real bundled Base audio fixture reached position 10 with confidence 1.0 after 7.9 seconds, observed 34 activity heartbeats and a one-word visual lead, with no renderer errors. This demonstrates the waveform-to-preview path; it is not a per-word latency guarantee or a noisy-room recognition benchmark.
