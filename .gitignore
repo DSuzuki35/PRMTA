@@ -1,0 +1,17 @@
+node_modules/
+dist/
+dist-electron/
+dist-server/
+release/
+.prmpt/
+test-results/
+playwright-report/
+.superpowers/
+*.log
+.tools/
+artifacts/
+
+# Private planning and prototype research (kept locally)
+docs/superpowers/
+docs/name-research.md
+docs/progress.md

@@ -1,0 +1,10 @@
+import { spawn } from 'node:child_process';
+import { readFileSync, writeFileSync } from 'node:fs';
+const [promptFile, outputFile, model] = process.argv.slice(2);
+if (!promptFile || !outputFile) throw new Error('Usage: node scripts/run-claude-review.mjs prompt.txt output.json');
+const child = spawn('claude', ['--print', ...(model ? ['--model', model] : []), '--output-format', 'json', '--tools', 'Read,Glob,Grep', '--allowedTools', 'Read,Glob,Grep', '--permission-mode', 'plan', '--strict-mcp-config', '--disable-slash-commands', '--no-session-persistence'], { shell: false, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
+let result = '', errors = '';
+child.stdout.on('data', chunk => result += chunk); child.stderr.on('data', chunk => errors += chunk);
+child.on('error', error => { console.error(error.message); process.exitCode = 1; });
+child.on('close', code => { writeFileSync(outputFile, result || errors); if (errors) writeFileSync(`${outputFile}.stderr`, errors); let failed = code !== 0; try { failed ||= JSON.parse(result).is_error === true; } catch { failed = true; } console.log(`Claude Code review ${failed ? 'failed' : 'completed'}; report ${outputFile}`); process.exitCode = failed ? 1 : 0; });
+child.stdin.end(readFileSync(promptFile, 'utf8'));

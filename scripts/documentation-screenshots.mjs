@@ -1,0 +1,30 @@
+import { _electron as electron } from '@playwright/test';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+const dir = mkdtempSync(join(tmpdir(), 'prmta-docs-'));
+const env = { ...process.env, PRMTA_DATA_DIR: join(dir, 'library'), PRMTA_PROFILE_DIR: join(dir, 'profile') }; delete env.ELECTRON_RUN_AS_NODE;
+const app = await electron.launch({ args: ['.'], env });
+try {
+  const page = await app.firstWindow(); await page.setViewportSize({ width: 1600, height: 1050 });
+  await page.getByText('Studio connected', { exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Try a sample', exact: true }).click();
+  await page.locator('.prompter').getByText('Great', { exact: true }).waitFor();
+  await page.evaluate(() => document.fonts.ready); await page.locator('[data-word="8"]').click(); await page.waitForTimeout(900);
+  mkdirSync('docs/images', { recursive: true });
+  mkdirSync('artifacts', { recursive: true });
+  await page.locator('.sidebar .brand').screenshot({ path: 'artifacts/wordmark.png' });
+  await page.screenshot({ path: 'docs/images/studio.png' });
+  await page.getByRole('button', { name: 'Library', exact: true }).click();
+  await page.getByRole('button', { name: /Your words. Your pace./ }).first().click();
+  await page.screenshot({ path: 'docs/images/library.png' });
+  await page.getByRole('button', { name: 'Outputs', exact: true }).click();
+  await page.locator('.url-input').first().waitFor();
+  await page.screenshot({ path: 'docs/images/outputs.png', mask: [page.locator('.url-input')], maskColor: '#25262c' });
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await page.getByLabel('Local model').waitFor(); await page.waitForTimeout(200);
+  await page.screenshot({ path: 'docs/images/settings.png', mask: [page.locator('.storage-note code')], maskColor: '#25262c' });
+  await page.getByLabel('Local model').scrollIntoViewIfNeeded();
+  await page.screenshot({ path: 'docs/images/models.png', mask: [page.locator('.storage-note code')], maskColor: '#25262c' });
+  console.log('Created five English screenshots with private links and paths masked.');
+} finally { await app.close(); rmSync(dir, { recursive: true, force: true }); }
