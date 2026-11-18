@@ -2,6 +2,8 @@
 
 ## 0.2.5 update verification
 
+- Windows CI passed for final source `c83c06d`. The final portable executable passed extraction, sample loading, bundled one-button voice setup and clean shutdown. SHA-256: `b3c6d4063aba010d3c8398ae88ec6060dafd21ebdb33b9786fec8607e674100f`.
+
 - Production build, 68 unit/integration tests and 30 browser workflows passed. New tests cover current TXT publication, rename/delete/restore, external edits, name collisions, case-only Windows renames and unavailable folders.
 - Migration tests verify local backups before removal, interrupted cleanup, preserving files changed since backup, conflict preflight and no repeated backup growth on retries. A private migration rehearsal against a copied existing revision folder produced one current script with unchanged text; the original folder was not modified by the rehearsal.
 - A local write-ahead journal recovers interrupted renames without losing identity or notes. A conflicting interrupted draft becomes an exportable/restorable copy, while external edits and ordinary synchronization continue.
