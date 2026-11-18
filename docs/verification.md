@@ -1,5 +1,17 @@
 # Release verification — PRMTA
 
+## 0.3.1 update verification
+
+- [Windows CI passed](https://github.com/DSuzuki35/PRMTA/actions/runs/44333901616) for source `7494f84`: production build, 124 unit/integration tests, two Python prerequisite tests and 42 Chromium workflows.
+- Final Setup and portable artifacts were built for Windows x64. Portable extraction, sample loading, bundled one-button Whisper setup and clean shutdown passed. Setup SHA-256: `7af254bc6c61bcb0bf7b051487e14a22e362e19f6c2f787dc49fe445a7ae56c4`; portable SHA-256: `aef3a026bc58eae7a9007d1db924c73538d43c0fe4dcec58a1696bad9dd1cd16`.
+- The real packaged updater passed current-version detection, a higher-version local download, SHA-512 validation, ready-state UI and the active-take installation guard. It used an isolated profile/cache and did not execute the test installer.
+- Native Electron 45.3.3 testing exercised page navigation and a held scroll while the test window was minimized and unfocused. SDL enumerated a real USB device. Physical controller button presses were not tested. Unit coverage checks per-device open/read failures, bounded backoff, disconnects, assignment gating and foreground fallback only when native initialization cannot start.
+- Managed Parakeet setup, cancellation/retry, failed-worker repair, CPU and DirectML transcription, processor reporting and owned-worker shutdown were tested. Downloads total 731,175,365 bytes. Short warmed English fixture chunks processed on the test PC in about 65 ms on CPU versus roughly 550 ms for Whisper Base; this excludes microphone collection and alignment and is not a total highlighting-latency guarantee.
+- The final packaged app captured a public JFK fixture through its microphone pipeline, submitted 11 Parakeet chunks and 30 waveform activity updates, reached word position 10 with confidence 1.0 after about 6.6 seconds, and reported no renderer errors. A source-app run also observed a one-word waveform-gated visual lead. Native controller initialization was ready in the packaged app, verifying the shipped SDL module and DLL.
+- Missing Microsoft C++ runtime errors are tested without changing system DLLs. A live module inspection confirmed the actual prerequisite; setup checks DLL loading after the small Python download and before model downloads. A completely clean Windows VM has not been exercised.
+- The actual Claude Code CLI reviewed the change and a focused follow-up. The follow-up found no concrete controller regressions or release blockers after per-device isolation and safe foreground fallback were added. Review metadata remains private.
+- English screenshots were refreshed and visually inspected. Automated accessibility checks passed for the standard screens. The production npm dependency audit reported zero vulnerabilities at verification time; this does not audit downloaded Python wheels or model weights.
+
 ## 0.3.0 update verification
 
 - [Windows CI passed](https://github.com/DSuzuki35/PRMTA/actions/runs/44307130417) for release source `5645038`, including the production build, unit suite and all browser workflows.
