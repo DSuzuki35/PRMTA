@@ -137,7 +137,7 @@ To back up the whole application, close PRMTA and copy its profile folder. New i
 | --- | --- |
 | Voice does not advance | Microphone on, Voice mode, Play, countdown finished, correct script language, and words near the current position. Click the correct passage after a large jump. |
 | Voice lags behind | Try Base or Tiny; use a closer microphone; close CPU-heavy apps. See the [voice guide](VOICE.md). |
-| Model will not start | Download it first. Stop a separately started server on port 8080 if you want PRMTA to manage the model. |
+| Model will not start | Download it first. If another app or server uses the Whisper port, choose a free **Whisper port** in Settings (e.g. 18080), click **Apply server**, then **Set up voice** and reconnect the microphone. |
 | Blank/unauthorized browser output | Copy a fresh link from Outputs, including its `#token` fragment. |
 | LAN device cannot connect | Same network, private-network firewall allowance, network sharing enabled, no Wi-Fi client isolation. |
 | Cloud sync reports errors | Folder available offline and writable, valid `.prmta` metadata, and no older PRMTA instance writing legacy revisions into it. |

@@ -4,7 +4,33 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import WebSocket from 'ws';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { createHost } from '../server/host';
+
+it('uses the current Whisper endpoint for setup and status before preferences finish saving', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prmta-port-'));
+  const speech = createServer((req, res) => { req.resume(); res.setHeader('Content-Type', 'application/json'); res.end(req.url === '/inference' ? '{"text":"one two three"}' : '{"status":"ok"}'); });
+  await new Promise<void>(resolve => speech.listen(0, '127.0.0.1', resolve));
+  const whisperUrl = `http://127.0.0.1:${(speech.address() as AddressInfo).port}`;
+  let started: unknown;
+  const host = await createHost({ dataDir: dir, port: 0, ensureSpeech: async (url, model) => { started = { url, model }; } });
+  const headers = { Authorization: `Bearer ${host.tokens.admin}`, 'Content-Type': 'application/json' };
+  try {
+    const response = await fetch(`${host.origin}/api/speech/start`, { method: 'POST', headers, body: JSON.stringify({ whisperUrl, model: 'turbo-q5' }) });
+    expect(response.status).toBe(200);
+    expect(started).toEqual({ url: whisperUrl, model: 'turbo-q5' });
+    const status = await fetch(`${host.origin}/api/speech/status?whisperUrl=${encodeURIComponent(whisperUrl)}`, { headers });
+    expect((await status.json()).ok).toBe(true);
+    // An active capture keeps its chosen endpoint even if stored preferences differ.
+    const wav = Buffer.alloc(44); wav.write('RIFF'); wav.write('WAVE', 8);
+    const transcript = await fetch(`${host.origin}/api/speech?whisperUrl=${encodeURIComponent(whisperUrl)}`, { method: 'POST', headers: { ...headers, 'Content-Type': 'audio/wav' }, body: wav });
+    expect(await transcript.json()).toEqual({ text: 'one two three' });
+    const invalid = await fetch(`${host.origin}/api/speech/start`, { method: 'POST', headers, body: JSON.stringify({ whisperUrl: 'http://example.com:18080' }) });
+    expect(invalid.ok).toBe(false);
+    expect(started).toEqual({ url: whisperUrl, model: 'turbo-q5' });
+  } finally { await host.close(); await new Promise<void>(resolve => speech.close(() => resolve())); rmSync(dir, { recursive: true, force: true }); }
+});
 
 it('authenticates library access and scopes output/remote capabilities', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'prmpt-host-')); const host = await createHost({ dataDir: dir, port: 0 });

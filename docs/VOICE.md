@@ -32,7 +32,13 @@ These are model file sizes, not RAM requirements. Q5 means quantized weights: a 
 
 ![Model selection and installation](images/models.png)
 
-Select a model, download it if needed, then turn the microphone off and back on. PRMTA restarts only the server process it owns. It never kills an independently started server. If another server occupies port 8080, its model is controlled externally. A request to apply a different managed model reports that conflict instead of silently pretending to switch.
+Select a model, download it if needed, then turn the microphone off and back on. PRMTA restarts only the server process it owns. It never kills an independently started server. If another Whisper server occupies the selected port, its model is controlled externally. A request to apply a different managed model reports that conflict instead of silently pretending to switch.
+
+## Whisper port
+
+In **Settings > Voice follow**, set **Whisper port** and click **Apply server**, then **Set up voice**. The default is 8080; use another free port, such as 18080, if another application already uses it. Ports must be whole numbers from 1 to 65535; reserved ports blocked by HTTP Fetch are rejected. The port is saved as part of **Local Whisper server**, so startup, connection checks and transcription use the same address after restart.
+
+The Windows app automatically starts its bundled server at `127.0.0.1` on the selected port. Turn the microphone off before setup and reconnect afterward. A managed port change takes effect on the next setup or microphone reconnect; only PRMTA's previous server is stopped. An already active microphone keeps its previous address until reconnected. A port occupied by another application produces a port-conflict message. `localhost` and `[::1]` remain addresses for independently managed servers; selecting one does not stop an existing managed process, which closes when PRMTA exits.
 
 For a guided setup, click **Set up voice** in Settings. It downloads the selected model when necessary, shows progress, verifies it and starts the included engine. When the button says **Voice ready**, enable the microphone in the studio and press Play. No terminal commands are needed in the Windows app. The commands below are only for developers running a source checkout.
 
@@ -55,6 +61,8 @@ For a source checkout on Windows:
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/setup-whisper.ps1
 powershell -ExecutionPolicy Bypass -File scripts/start-whisper.ps1
+# Optional: match a custom port configured in Settings
+powershell -ExecutionPolicy Bypass -File scripts/start-whisper.ps1 -Port 18080
 ```
 
 The setup script downloads pinned whisper.cpp v1.9.2 binaries and multilingual Base. The packaged app already includes these and starts its owned server when the microphone is enabled. The bundled binary uses CPU inference; GPU acceleration is an external-server setup, not a switch in PRMTA.

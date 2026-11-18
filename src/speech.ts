@@ -26,9 +26,9 @@ export async function startSpeech(preferences: Preferences, onText: (text: strin
     recognition.start(); onStatus('Browser listening · may use an online service');
     return stop;
   }
-  const status = await api<{ ok: boolean; message: string }>('/speech/status');
+  const status = await api<{ ok: boolean; message: string }>(`/speech/status?whisperUrl=${encodeURIComponent(preferences.whisperUrl)}`);
   const models = await api<{ managed: boolean }>('/speech/models');
-  if (models.managed || !status.ok) await api('/speech/start', {});
+  if (models.managed || !status.ok) await api('/speech/start', { whisperUrl: preferences.whisperUrl, model: preferences.whisperModel });
   const stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: preferences.microphoneId ? { exact: preferences.microphoneId } : undefined, channelCount: 1, echoCancellation: true, noiseSuppression: true }, video: false });
   let context: AudioContext;
   try { context = new AudioContext(); await context.resume(); }
@@ -66,7 +66,7 @@ export async function startSpeech(preferences: Preferences, onText: (text: strin
     if (busy || !key || captureKey() !== key || total < context.sampleRate * timing.minimum || Date.now() - lastVoice > 2200) return;
     busy = true; const requestKey = key, requestEpoch = epoch; const data = new Float32Array(total); let offset = 0;
     for (const chunk of chunks) { data.set(chunk, offset); offset += chunk.length; }
-    try { const response = await api<{ text: string }>('/speech', undefined, wav(data, context.sampleRate)); if (!stopped && epoch === requestEpoch && captureKey() === requestKey && response.text) onText(response.text); }
+    try { const response = await api<{ text: string }>(`/speech?whisperUrl=${encodeURIComponent(preferences.whisperUrl)}`, undefined, wav(data, context.sampleRate)); if (!stopped && epoch === requestEpoch && captureKey() === requestKey && response.text) onText(response.text); }
     catch (error) { if (!stopped) onStatus(String(error)); }
     finally { busy = false; }
   }, timing.interval);

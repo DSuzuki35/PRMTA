@@ -12,6 +12,7 @@ import { CloudLibrary } from './cloud-library';
 import { Session } from './session';
 import { commandSchema, defaultPreferences, draftSchema, preferencesSchema, type Draft } from '../shared/model';
 import { modelById, type ModelsInfo } from '../shared/whisper-models';
+import { whisperEndpoint } from '../shared/whisper-endpoint';
 
 type Role = 'admin' | 'output' | 'remote';
 type AuthRequest = Request & { role?: Role };
@@ -147,20 +148,17 @@ export async function createHost(options: { dataDir: string; port?: number; stat
     if (!Buffer.isBuffer(req.body)) { res.status(400).json({ error: 'DOCX file missing.' }); return; }
     const result = await mammoth.extractRawText({ buffer: req.body }); res.json({ text: result.value });
   });
-  const whisperBase = () => {
-    const url = new URL(preferences.whisperUrl);
-    if (url.protocol !== 'http:' || !['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) || url.username || url.password) throw new Error('Whisper requires a local HTTP address, e.g. http://127.0.0.1:8080.');
-    return url.origin;
-  };
-  app.get('/api/speech/status', admin, async (_req, res) => {
-    try { const response = await fetch(`${whisperBase()}/health`, { signal: AbortSignal.timeout(2500), redirect: 'error' }); const body = await response.json() as { status?: string }; const ok = response.ok && body.status === 'ok'; res.json({ ok, message: ok ? 'Whisper connected' : 'No compatible Whisper server at this address.' }); }
+  const whisperBase = (value = preferences.whisperUrl) => whisperEndpoint(value).origin;
+  app.get('/api/speech/status', admin, async (req, res) => {
+    const { whisperUrl } = z.object({ whisperUrl: z.string().max(2000).optional() }).parse(req.query);
+    try { const response = await fetch(`${whisperBase(whisperUrl)}/health`, { signal: AbortSignal.timeout(2500), redirect: 'error' }); const body = await response.json() as { status?: string }; const ok = response.ok && body.status === 'ok'; res.json({ ok, message: ok ? 'Whisper connected' : 'No compatible Whisper server at this address.' }); }
     catch { res.json({ ok: false, message: 'Voice is not running yet. Use Set up voice to prepare it.' }); }
   });
   app.post('/api/speech/start', admin, async (req, res) => {
-    const { model } = z.object({ model: preferencesSchema.shape.whisperModel.optional() }).parse(req.body ?? {});
+    const { model, whisperUrl } = z.object({ model: preferencesSchema.shape.whisperModel.optional(), whisperUrl: z.string().max(2000).optional() }).parse(req.body ?? {});
     if (!options.ensureSpeech) { res.status(503).json({ error: 'Built-in voice setup is available in the Windows app. Check your external server connection.' }); return; }
     if (speechBusy) { res.status(409).json({ error: 'Wait for the current transcription before switching models.' }); return; }
-    await options.ensureSpeech(whisperBase(), model ?? preferences.whisperModel); res.json({ ok: true });
+    await options.ensureSpeech(whisperBase(whisperUrl), model ?? preferences.whisperModel); res.json({ ok: true });
   });
   app.get('/api/speech/models', admin, (_req, res) => res.json(options.models?.list() ?? { managed: false, models: [], activeModel: null }));
   app.post('/api/speech/models/install', admin, (req, res) => {
@@ -169,13 +167,15 @@ export async function createHost(options: { dataDir: string; port?: number; stat
     options.models.install(id); res.json(options.models.list());
   });
   app.post('/api/speech', admin, express.raw({ type: 'audio/wav', limit: '1mb' }), async (req, res) => {
+    const { whisperUrl } = z.object({ whisperUrl: z.string().max(2000).optional() }).parse(req.query);
+    const endpoint = whisperBase(whisperUrl);
     if (speechBusy) { res.status(429).json({ error: 'Speech recognition is still processing the previous audio.' }); return; }
     if (!Buffer.isBuffer(req.body) || req.body.length < 44 || req.body.toString('ascii', 0, 4) !== 'RIFF' || req.body.toString('ascii', 8, 12) !== 'WAVE') { res.status(400).json({ error: 'Expected valid WAV audio.' }); return; }
     speechBusy = true;
     try {
       const form = new FormData(); form.append('file', new Blob([new Uint8Array(req.body)], { type: 'audio/wav' }), 'speech.wav');
       form.append('response_format', 'json'); form.append('language', preferences.language); form.append('temperature', '0');
-      const response = await fetch(`${whisperBase()}/inference`, { method: 'POST', body: form, signal: AbortSignal.timeout(20000), redirect: 'error' });
+      const response = await fetch(`${endpoint}/inference`, { method: 'POST', body: form, signal: AbortSignal.timeout(20000), redirect: 'error' });
       if (!response.ok) throw new Error(`Whisper HTTP ${response.status}`);
       const result = await response.json() as { text?: string };
       res.json({ text: typeof result.text === 'string' ? result.text.slice(0, 2000).trim() : '' });
