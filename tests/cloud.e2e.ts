@@ -81,6 +81,7 @@ test('an existing legacy cloud preference waits for explicit conversion approval
   await page.goto(host.url('admin')); await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await expect(page.getByText('Your previous cloud folder needs an upgrade.', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: 'Open cloud library', exact: true }).click();
+  await expect(page.getByText('Active local library', { exact: false })).toBeVisible();
   expect(readdirSync(folder)).toEqual(before);
   await page.getByRole('button', { name: 'Open folder only', exact: true }).click(); await expect(page.getByRole('dialog')).toHaveCount(0);
   expect(readdirSync(folder).filter(f => f.endsWith('.txt'))).toEqual(['Old script.txt']); expect(host.info().upgradeRequired).toBe(false);
