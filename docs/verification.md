@@ -2,6 +2,7 @@
 
 ## 0.3.0 update verification
 
+- [Windows CI passed](https://github.com/DSuzuki35/PRMTA/actions/runs/44307130417) for release source `5645038`, including the production build, unit suite and all browser workflows.
 - Final portable extraction, sample loading, bundled one-button Whisper setup and clean shutdown passed. The real packaged updater passed current-version discovery, a local higher-version download, SHA-512 validation, ready-state UI and refusal to install during an active take, using an isolated profile/cache and never executing the fixture installer. Setup SHA-256: `1c0f5917c947f56e9f5ad5b0c34e81d94a01e8e78f492afeffc4d51a7fa6eacf`; portable SHA-256: `daee05676ad95852c85373a0b55052a988f393e0ba5c4a3802217eb4138c7961`.
 - Production build, 96 unit/integration tests and 37 Chromium workflows passed. The controller tests cover assignment/clearing, duplicate rejection, simultaneous inputs, sentence/paragraph/page navigation, release, blur, dialogs, Settings, disconnect and expiring input heartbeats.
 - Motion checks cover studio/output synchronization, page-profile manual scrolling, forward and previously visited reverse rendering boundaries, and stopping the visible animation on release. Long-paragraph checks keep the current word rendered at boundary positions and in a 4K output.
