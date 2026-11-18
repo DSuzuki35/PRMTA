@@ -1,8 +1,32 @@
 # Voice following and model selection
 
-PRMTA separates speech recognition from script following. Whisper turns short microphone windows into text. A bounded fuzzy alignment matches that text to nearby words in the script. Small omissions, fillers and slightly different wording are tolerated; arbitrary paraphrasing and large jumps are not guaranteed. At least three usable recognized words are required before matching advances. Forward matches must start near the current reading position (at most six omitted words, fewer for short phrases), and one result can advance at most 24 words. Distant accidental phrases are rejected instead of being used to seek. Earlier phrases never rewind playback. If you intentionally skip a larger passage, click the destination or use page navigation, then continue reading.
+PRMTA separates speech recognition from script following. The selected engine turns short microphone windows into text. A bounded fuzzy alignment matches that text to nearby words in the script. Small omissions, fillers and slightly different wording are tolerated; arbitrary paraphrasing and large jumps are not guaranteed. At least three usable recognized words are required before matching advances. Forward matches must start near the current reading position (at most six omitted words, fewer for short phrases), and one result can advance at most 24 words. Distant accidental phrases are rejected instead of being used to seek. Earlier phrases never rewind playback. If you intentionally skip a larger passage, click the destination or use page navigation, then continue reading.
 
-Recognition is local when using the default Whisper provider. The microphone is resampled to 16 kHz mono WAV and sent over loopback HTTP to whisper.cpp. The default **Responsive** setting keeps approximately three seconds of overlapping audio and checks every 500 ms after the first second of speech. **Steady** uses five seconds and a 1,000 ms check interval. Only one inference request runs at a time; slow inference does not queue additional work. Silence is gated. Pausing a take stops inference and clears buffered speech; resuming or loading a script starts with fresh audio. Actual highlight latency includes model processing time and the words needed for a confident match. The timeout for one inference is 20 seconds.
+Recognition is local with Whisper or Parakeet. The microphone is resampled to 16 kHz mono WAV; Whisper uses the loopback whisper.cpp server, while Parakeet uses a private local worker managed by the Windows app. The default **Responsive** setting keeps approximately three seconds of overlapping audio and checks every 500 ms after the first second of speech. **Steady** uses five seconds and a 1,000 ms check interval. Only one inference request runs at a time; slow inference does not queue additional work. Silence is gated. Pausing a take stops inference and clears buffered speech; resuming or loading a script starts with fresh audio. Actual highlight latency includes audio collection, model processing and the words needed for a confident match. Whisper's request timeout is 20 seconds; Parakeet's transcription timeout is 60 seconds.
+
+New profiles default to **English** for Whisper and browser recognition. Existing language preferences are retained. Parakeet uses automatic language detection and does not use the **Script language** selector.
+
+## NVIDIA Parakeet (optional)
+
+![Parakeet setup and processing options](images/parakeet.png)
+
+The Windows x64 app can install **Parakeet TDT 0.6B v3 · multilingual · INT8** as an alternative to Whisper. The model automatically detects 25 supported languages, including English and German. PRMTA uses an INT8 ONNX conversion with a private local runtime. See the [NVIDIA model card](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) and [Ilya Stupakov's ONNX conversion](https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx).
+
+1. Turn off the microphone, then open **Settings > Voice follow > Speech recognition**.
+2. Select **NVIDIA Parakeet · local**.
+3. Keep **Parakeet processing** on **CPU · recommended for consistent response** and click **Set up Parakeet**.
+4. Wait for download progress, verification and model startup. The initial download is about 731 MB, including the model and private runtime; unpacked disk use is larger. No terminal commands or separate Python installation are needed.
+5. When **Parakeet ready** appears, enable voice in the studio and press Play.
+
+On a clean Windows installation, Parakeet may also need the [Microsoft Visual C++ x64 runtime](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist). If it is missing, setup shows a **Get Microsoft Visual C++ runtime** button. Install the official Microsoft download, then retry Parakeet setup.
+
+Setup downloads only when requested. Files have pinned URLs, sizes and SHA-256 hashes. **Cancel download** stops setup; retry reuses complete verified files. If installation succeeds but the engine is stopped, the button becomes **Start Parakeet**. The model and runtime remain in your application profile for later use. Recognition does not need an internet connection after setup.
+
+**GPU · DirectML** is optional. CPU is the recommended starting point for short teleprompter audio windows; GPU startup can be longer and processing can be slower on some hardware. The status reports the active processor. Turn off the microphone before changing the processor, then reconnect it. If GPU startup fails or is too slow, select CPU and retry.
+
+On the release-test machine, a warmed Parakeet CPU inference on a 2.2-second JFK speech fixture took about **63 ms**, compared with about **550 ms** for Whisper Base. These measurements cover backend processing on one fixture and machine. They exclude microphone collection, startup and script alignment, and do not promise that spoken words will highlight within those times. Test your own microphone, script and hardware before a take.
+
+Parakeet is a desktop-managed provider. The standalone browser host does not install its runtime. Its recognition results use the same nearby script matching and stale-audio safeguards as Whisper.
 
 ## Smooth voice highlighting
 
@@ -10,13 +34,19 @@ Recognition is local when using the default Whisper provider. The microphone is 
 
 In the studio inspector, select an **Output profile**, then use **Reading area > Smooth voice highlighting**. It is enabled by default, independently for studio, display/browser and VR. **Highlight current word** must also be enabled. Browser recognition retains recognition-driven highlighting because it does not supply the local waveform gate.
 
-With local Whisper, PRMTA monitors the microphone waveform energy (RMS) with a short attack/release gate and noise-floor tracking, including stable room noise. After a script match, it can preview up to two upcoming words while audio remains active. It learns words per second from confirmed progress and voiced time over the last two minutes of the current take. Until enough observations exist, it uses a conservative initial pace. Very short recognition bursts and implausible rate samples do not train the estimate.
+With local Whisper or Parakeet, PRMTA monitors the microphone waveform energy (RMS) with a short attack/release gate and noise-floor tracking, including stable room noise. After a script match, it can preview up to two upcoming words while audio remains active. It learns words per second from confirmed progress and voiced time over the last two minutes of the current take. Until enough observations exist, it uses a conservative initial pace. Very short recognition bursts and implausible rate samples do not train the estimate.
 
 The estimate stops advancing during a pause, and lost audio heartbeats expire after 350 ms. New recognition corrects it, including moving the visual highlight back if the guess was wrong. After 2.5 seconds without a fresh matching result, it returns to the confirmed word. Reset, seek, mode changes and pause/resume clear the estimate and pace history. This is a visual aid: predicted words are not marked as read, do not steer speech matching and cannot turn a page. The reading guide and page changes still follow confirmed progress.
 
-This is an energy gate, not a semantic voice-activity model: sustained background noise can look like speech. The two-word limit, recent-match requirement and corrections keep that effect bounded. It does not eliminate Whisper processing latency. No additional audio recording, recognition request or external service is introduced.
+This is an energy gate, not a semantic voice-activity model: sustained background noise can look like speech. The two-word limit, recent-match requirement and corrections keep that effect bounded. It does not eliminate recognition latency. No additional audio recording, recognition request or external service is introduced.
 
-## Included and downloadable models
+## Voice following during controller navigation
+
+In **Settings > Joystick / Gamepad**, **Keep voice follow active** is enabled by default. It preserves an already-playing Voice take when you jump to another page, paragraph or sentence. A held scroll temporarily takes priority over recognized speech; release resumes following at the new location using fresh audio. Results captured before the jump or during the hold cannot pull the script back afterward.
+
+This option never turns on the microphone or starts a paused take. Explicit Pause, Reset and script changes remain authoritative. Turn the option off to pause the take on controller navigation. Timed Auto playback pauses regardless of this option. The separate **Controller input in background** option lets native Windows controller input work while another app is focused or PRMTA is minimized; browser-only controller input still requires focus.
+
+## Included and downloadable Whisper models
 
 The Windows release includes multilingual **Base** and the whisper.cpp CPU server. Additional models download only when requested in Settings, into the application profile's `models` folder. Files are installed after exact size and SHA-256 verification. A failed download can be retried; automatic resume is not implemented.
 
@@ -65,7 +95,7 @@ powershell -ExecutionPolicy Bypass -File scripts/start-whisper.ps1
 powershell -ExecutionPolicy Bypass -File scripts/start-whisper.ps1 -Port 18080
 ```
 
-The setup script downloads pinned whisper.cpp v1.9.2 binaries and multilingual Base. The packaged app already includes these and starts its owned server when the microphone is enabled. The bundled binary uses CPU inference; GPU acceleration is an external-server setup, not a switch in PRMTA.
+The setup script downloads pinned whisper.cpp v1.9.2 binaries and multilingual Base. The packaged app already includes these and starts its owned server when the microphone is enabled. The bundled Whisper binary uses CPU inference; Whisper GPU acceleration requires an external server. Parakeet's optional DirectML setting is independent of Whisper.
 
 ## Practical recording workflow
 
@@ -76,4 +106,4 @@ The setup script downloads pinned whisper.cpp v1.9.2 binaries and multilingual B
 5. If you skip a large section, click the new passage or use page navigation. If you go off script, PRMTA should wait rather than scroll blindly.
 6. If a microphone is unplugged, reconnect it and turn capture on again. Permission errors are shown in the studio.
 
-Browser speech recognition is optional and browser-dependent. It may use an online service and may be unavailable in Electron. Its Automatic language option currently uses German. The local Whisper provider is the supported desktop default. PRMTA does not currently integrate the proprietary Wispr Flow application.
+Browser speech recognition is optional and browser-dependent. It may use an online service and may be unavailable in Electron. Its Automatic language option uses English. Local Whisper is the desktop default; local Parakeet is an optional provider. PRMTA does not currently integrate the proprietary Wispr Flow application.

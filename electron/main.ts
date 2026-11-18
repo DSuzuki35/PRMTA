@@ -7,16 +7,23 @@ import { ModelStore } from './models';
 import { autoUpdater } from 'electron-updater';
 import { UpdateService, updateMode, closeForUpdate } from './updater';
 import { RELEASES_URL } from '../shared/updater';
+import { NativeControllerService, type ControllerSampler } from './controller-service';
+import { createSdlControllerSampler } from './controller-sdl';
+import type { ControllerContext, ControllerState } from '../shared/controller';
+import { ParakeetService } from './parakeet';
+import type { ParakeetAcceleration } from '../shared/parakeet';
 
 let main: BrowserWindow | null = null; let host: Host; const outputs = new Map<number, BrowserWindow>();
 let closing = false;
 let whisper: WhisperService;
+let parakeet: ParakeetService;
 let models: ModelStore;
 let updates: UpdateService;
 let installing = false;
+let controllers: NativeControllerService;
 let shutdown: Promise<unknown> | undefined;
 function closeServices() {
-  if (!shutdown) { closing = true; updates?.stop(); whisper?.close(); shutdown = Promise.all([models?.close(), host?.close()]); }
+  if (!shutdown) { closing = true; controllers?.close(); updates?.stop(); whisper?.close(); shutdown = Promise.all([models?.close(), parakeet?.close(), host?.close()]); }
   return shutdown;
 }
 app.setName('PRMTA');
@@ -32,7 +39,8 @@ else {
     const whisperRoot = app.isPackaged ? join(process.resourcesPath, 'whisper') : join(__dirname, '../.tools/whisper');
     models = new ModelStore(whisperRoot, join(app.getPath('userData'), 'models'));
     whisper = new WhisperService(whisperRoot, id => models.path(id));
-    const hostOptions = { dataDir, staticDir: join(__dirname, '../dist'), canControl: () => !installing, ensureSpeech: (url: string, model: string) => whisper.ensure(url, model), models: { list: () => ({ managed: true, models: models.list(), activeModel: whisper.activeModel }), install: (id: string) => models.install(id) } };
+    parakeet = new ParakeetService(app.getPath('userData'), app.isPackaged ? join(process.resourcesPath, 'parakeet') : join(__dirname, '../scripts'));
+    const hostOptions = { dataDir, staticDir: join(__dirname, '../dist'), canControl: () => !installing, ensureSpeech: (url: string, model: string) => whisper.ensure(url, model), models: { list: () => ({ managed: true, models: models.list(), activeModel: whisper.activeModel }), install: (id: string) => models.install(id) }, parakeet: { status: () => parakeet.status(), install: () => parakeet.install(), ensure: (acceleration?: ParakeetAcceleration) => parakeet.ensure(acceleration), transcribe: (wav: Buffer) => parakeet.transcribe(wav), cancelInstall: () => parakeet.cancelInstall() } };
     try { host = await createHost({ ...hostOptions, port: 4317 }); }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EADDRINUSE') throw error; host = await createHost({ ...hostOptions, port: 0 }); }
     const safeWindow = (win: BrowserWindow) => {
@@ -54,6 +62,24 @@ else {
     });
     electronSession.defaultSession.setPermissionCheckHandler((contents, permission, origin) => contents === main?.webContents && permission === 'media' && origin.startsWith(host.origin));
     const admin = (event: Electron.IpcMainInvokeEvent) => { if (event.sender !== main?.webContents || event.senderFrame !== main?.webContents.mainFrame || !event.senderFrame?.url.startsWith(host.origin + '/')) throw new Error('Untrusted window'); };
+    let sampler: ControllerSampler | null = null;
+    let unavailable: Pick<ControllerState, 'status' | 'message'> | undefined;
+    if (process.platform !== 'win32') unavailable = { status: 'unsupported', message: 'Native background controller input is available in the Windows app.' };
+    else try { sampler = await createSdlControllerSampler(); }
+    catch (error) { unavailable = { status: 'error', message: `Native controller input could not start: ${String(error).replace(/^Error: /, '')}` }; }
+    controllers = new NativeControllerService({ sampler, unavailable, getPreferences: () => host.getPreferences(), dispatch: command => host.dispatchCommand(command), isFocused: () => !!main?.isFocused(), canControl: () => !closing && !installing });
+    ipcMain.handle('controller-state', event => { admin(event); return controllers.state; });
+    ipcMain.handle('controller-context', (event, context: ControllerContext) => {
+      admin(event);
+      if (!context || typeof context.blocked !== 'boolean' || typeof context.assigning !== 'boolean') throw new Error('Invalid controller context.');
+      controllers.setContext({ blocked: context.blocked, assigning: context.assigning });
+    });
+    // A dead or reloading renderer must explicitly establish its UI context
+    // again, but normal blur/minimize never invalidates native background input.
+    main.webContents.on('did-start-loading', () => controllers.invalidateContext());
+    main.webContents.on('render-process-gone', () => controllers.invalidateContext());
+    main.on('unresponsive', () => controllers.invalidateContext());
+    main.on('closed', () => controllers.invalidateContext());
     updates = new UpdateService(autoUpdater, updateMode(app.isPackaged, process.platform, !!(process.env.PORTABLE_EXECUTABLE_DIR || process.env.PORTABLE_EXECUTABLE_FILE), existsSync(join(dirname(process.execPath), 'Uninstall PRMTA.exe'))), app.getVersion(), status => {
       if (main && !main.isDestroyed()) main.webContents.send('update-status', status);
     }, async () => {
@@ -88,6 +114,7 @@ else {
     });
     ipcMain.handle('close-outputs', event => { admin(event); for (const output of outputs.values()) output.close(); });
     ipcMain.handle('choose-folder', async event => { admin(event); const result = await dialog.showOpenDialog(main!, { title: 'PRMTA Choose cloud folder', properties: ['openDirectory', 'createDirectory'] }); return result.canceled ? null : result.filePaths[0]; });
+    ipcMain.handle('parakeet-runtime-help', async event => { admin(event); await shell.openExternal('https://aka.ms/vc14/vc_redist.x64.exe'); });
     ipcMain.handle('open-browser', async (event, url: string) => { admin(event); const target = new URL(url); if (target.origin !== host.origin || !['/output', '/remote'].includes(target.pathname)) throw new Error('Invalid output link.'); await shell.openExternal(url); });
     screen.on('display-removed', (_event, display) => outputs.get(display.id)?.close());
     screen.on('display-metrics-changed', (_event, display) => { const win = outputs.get(display.id); if (win) win.setBounds(display.bounds); });

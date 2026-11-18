@@ -9,7 +9,7 @@ export class ButtonCapture {
   sample(pads: readonly (Pad | null)[]): CapturedButton | null {
     const current = new Map<string, boolean>();
     const bindings = new Map<string, CapturedButton>();
-    for (const pad of pads) if (pad) pad.buttons.slice(0, 32).forEach((button, index) => {
+    for (const pad of pads) if (pad) pad.buttons.slice(0, 128).forEach((button, index) => {
       const key = `${pad.index}:${pad.id}:${index}`; current.set(key, button.pressed); bindings.set(key, { button: index, controller: pad.id });
     });
     let result: CapturedButton | null = null;

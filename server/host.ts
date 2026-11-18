@@ -10,14 +10,19 @@ import { z, ZodError } from 'zod';
 import { Library } from './library';
 import { CloudLibrary } from './cloud-library';
 import { Session } from './session';
-import { commandSchema, defaultPreferences, draftSchema, preferencesSchema, type Draft } from '../shared/model';
+import { commandSchema, defaultPreferences, draftSchema, preferencesSchema, type Draft, type Command } from '../shared/model';
 import { modelById, type ModelsInfo } from '../shared/whisper-models';
 import { whisperEndpoint } from '../shared/whisper-endpoint';
 
 type Role = 'admin' | 'output' | 'remote';
 type AuthRequest = Request & { role?: Role };
 const isLocal = (address?: string) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address ?? '');
-export async function createHost(options: { dataDir: string; port?: number; staticDir?: string; canControl?: () => boolean; ensureSpeech?: (url: string, model: string) => Promise<void>; models?: { list: () => ModelsInfo; install: (id: string) => void } }) {
+type ParakeetBackend = {
+  status(): unknown; install(): Promise<void>; cancelInstall(): Promise<void>;
+  ensure(acceleration: 'cpu' | 'directml'): Promise<void>;
+  transcribe(wav: Buffer): Promise<{ text: string; ms: number }>;
+};
+export async function createHost(options: { dataDir: string; port?: number; staticDir?: string; canControl?: () => boolean; ensureSpeech?: (url: string, model: string) => Promise<void>; models?: { list: () => ModelsInfo; install: (id: string) => void }; parakeet?: ParakeetBackend }) {
   const localLibrary = new Library(options.dataDir); let library = localLibrary;
   let cloud: CloudLibrary | null = null;
   const opened = new Map<string, Library>(); const session = new Session();
@@ -150,6 +155,25 @@ export async function createHost(options: { dataDir: string; port?: number; stat
     const result = await mammoth.extractRawText({ buffer: req.body }); res.json({ text: result.value });
   });
   const whisperBase = (value = preferences.whisperUrl) => whisperEndpoint(value).origin;
+  app.get('/api/speech/parakeet/status', admin, (_req, res) => res.json(options.parakeet?.status() ?? {
+    managed: false, supported: false, installed: false, phase: 'unavailable', model: 'Parakeet TDT 0.6B v3',
+    provider: null, received: 0, total: 0, percent: 0, message: 'Parakeet setup is available in the Windows desktop app.', error: null,
+  }));
+  app.post('/api/speech/parakeet/install', admin, (_req, res) => {
+    if (!options.parakeet) { res.status(503).json({ error: 'Parakeet setup requires the Windows desktop app.' }); return; }
+    void options.parakeet.install().catch(() => {});
+    res.json(options.parakeet.status());
+  });
+  app.post('/api/speech/parakeet/start', admin, async (req, res) => {
+    const { acceleration } = z.object({ acceleration: z.enum(['cpu', 'directml']).optional() }).parse(req.body ?? {});
+    if (!options.parakeet) { res.status(503).json({ error: 'Parakeet requires the Windows desktop app.' }); return; }
+    if (speechBusy) { res.status(409).json({ error: 'Wait for the current transcription before switching recognition engines.' }); return; }
+    await options.parakeet.ensure(acceleration ?? preferences.parakeetAcceleration); res.json(options.parakeet.status());
+  });
+  app.post('/api/speech/parakeet/cancel', admin, async (_req, res) => {
+    if (!options.parakeet) { res.status(503).json({ error: 'Parakeet setup requires the Windows desktop app.' }); return; }
+    await options.parakeet.cancelInstall(); res.json(options.parakeet.status());
+  });
   app.get('/api/speech/status', admin, async (req, res) => {
     const { whisperUrl } = z.object({ whisperUrl: z.string().max(2000).optional() }).parse(req.query);
     try { const response = await fetch(`${whisperBase(whisperUrl)}/health`, { signal: AbortSignal.timeout(2500), redirect: 'error' }); const body = await response.json() as { status?: string }; const ok = response.ok && body.status === 'ok'; res.json({ ok, message: ok ? 'Whisper connected' : 'No compatible Whisper server at this address.' }); }
@@ -168,19 +192,24 @@ export async function createHost(options: { dataDir: string; port?: number; stat
     options.models.install(id); res.json(options.models.list());
   });
   app.post('/api/speech', admin, express.raw({ type: 'audio/wav', limit: '1mb' }), async (req, res) => {
-    const { whisperUrl } = z.object({ whisperUrl: z.string().max(2000).optional() }).parse(req.query);
-    const endpoint = whisperBase(whisperUrl);
+    const { whisperUrl, provider = 'whisper' } = z.object({ whisperUrl: z.string().max(2000).optional(), provider: z.enum(['whisper', 'parakeet']).optional() }).parse(req.query);
     if (speechBusy) { res.status(429).json({ error: 'Speech recognition is still processing the previous audio.' }); return; }
     if (!Buffer.isBuffer(req.body) || req.body.length < 44 || req.body.toString('ascii', 0, 4) !== 'RIFF' || req.body.toString('ascii', 8, 12) !== 'WAVE') { res.status(400).json({ error: 'Expected valid WAV audio.' }); return; }
     speechBusy = true;
     try {
+      if (provider === 'parakeet') {
+        if (!options.parakeet) { res.status(503).json({ error: 'Parakeet requires the Windows desktop app.' }); return; }
+        const result = await options.parakeet.transcribe(req.body);
+        res.json({ text: result.text.slice(0, 2000).trim(), ms: result.ms }); return;
+      }
+      const endpoint = whisperBase(whisperUrl);
       const form = new FormData(); form.append('file', new Blob([new Uint8Array(req.body)], { type: 'audio/wav' }), 'speech.wav');
       form.append('response_format', 'json'); form.append('language', preferences.language); form.append('temperature', '0');
       const response = await fetch(`${endpoint}/inference`, { method: 'POST', body: form, signal: AbortSignal.timeout(20000), redirect: 'error' });
       if (!response.ok) throw new Error(`Whisper HTTP ${response.status}`);
       const result = await response.json() as { text?: string };
       res.json({ text: typeof result.text === 'string' ? result.text.slice(0, 2000).trim() : '' });
-    } catch { res.status(502).json({ error: 'Whisper unavailable or too slow. Check the server and model.' }); }
+    } catch { res.status(502).json({ error: provider === 'parakeet' ? 'Parakeet unavailable or too slow. Check its status in Settings and start it again.' : 'Whisper unavailable or too slow. Check the server and model.' }); }
     finally { speechBusy = false; }
   });
   const createListener = async (port: number, hostname: string) => {
@@ -227,6 +256,12 @@ export async function createHost(options: { dataDir: string; port?: number; stat
   const ticker = setInterval(() => { if (session.state.playing || session.scrolling) { session.tick(); broadcast('tick'); } }, 100);
   const syncTimer = setInterval(sync, 5000);
   return { origin, tokens, url, get library() { return library; }, session, info,
+    getPreferences: () => preferences,
+    dispatchCommand(command: Command) {
+      if (options.canControl && !options.canControl()) return;
+      session.command(command.type === 'play' && command.countdown === undefined ? { ...command, countdown: preferences.countdown } : command);
+      broadcast('tick');
+    },
     async close() { clearInterval(ticker); clearInterval(syncTimer); for (const ws of sockets.keys()) ws.terminate(); await Promise.all(servers.map(s => new Promise<void>(r => { s.closeAllConnections(); s.close(() => r()); }))); for (const cache of opened.values()) cache.close(); localLibrary.close(); },
   };
 }

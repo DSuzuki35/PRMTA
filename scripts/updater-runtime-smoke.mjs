@@ -7,8 +7,9 @@ import { createReadStream, existsSync, mkdtempSync, readFileSync, rmSync, statSy
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve, sep } from 'node:path';
 
-const executable = resolve(process.argv[2] ?? 'release/0.3.0/win-unpacked/PRMTA.exe');
-const installer = resolve(process.argv[3] ?? 'release/0.3.0/PRMTA-Setup-0.3.0-x64.exe');
+const version = JSON.parse(readFileSync('package.json', 'utf8')).version;
+const executable = resolve(process.argv[2] ?? `release/${version}/win-unpacked/PRMTA.exe`);
+const installer = resolve(process.argv[3] ?? `release/${version}/PRMTA-Setup-${version}-x64.exe`);
 const releaseRoot = resolve('release') + sep;
 if (!executable.startsWith(releaseRoot) || basename(dirname(executable)) !== 'win-unpacked') throw new Error('Use an isolated release/win-unpacked build, never an installed app.');
 if (!existsSync(executable) || !existsSync(installer)) throw new Error('Build the unpacked app and Setup installer first.');
@@ -17,7 +18,7 @@ if (existsSync(marker)) throw new Error('Refusing to use a folder that already h
 const dir = mkdtempSync(join(tmpdir(), 'prmta-updater-smoke-'));
 const filename = basename(installer), size = statSync(installer).size;
 const sha512 = createHash('sha512').update(readFileSync(installer)).digest('base64');
-let fixtureVersion = '0.3.0';
+let fixtureVersion = version;
 let downloads = 0;
 const server = createServer((request, response) => {
   const path = new URL(request.url, 'http://localhost').pathname;
@@ -52,7 +53,7 @@ try {
   }, { feed, cache: join(dir, 'update-cache') });
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   const updates = page.locator('.settings-card').filter({ has: page.getByRole('heading', { name: 'App updates', exact: true }) });
-  await expect(updates.getByText('Version 0.3.0', { exact: true })).toBeVisible();
+  await expect(updates.getByText(`Version ${version}`, { exact: true })).toBeVisible();
   await updates.getByRole('button', { name: 'Check for updates', exact: true }).click();
   await expect(updates.getByText('You have the latest version.', { exact: true })).toBeVisible();
   if (process.env.PRMTA_CAPTURE_UPDATE_DOCS) await updates.screenshot({ path: 'docs/images/updates.png' });

@@ -19,4 +19,5 @@ jobs:
       - run: npx playwright install chromium
       - run: npm run build
       - run: npm test
+      - run: python tests/parakeet-runtime.test.py
       - run: npm run test:e2e

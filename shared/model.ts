@@ -34,7 +34,7 @@ export const defaultAppearance: Appearance = {
   color: '#f2f1eb', background: '#101113',
   flow: 'scroll', smoothVoice: true,
 };
-const buttonSchema = z.number().int().min(0).max(31).nullable();
+const buttonSchema = z.number().int().min(0).max(127).nullable();
 export const gamepadActions = [
   { key: 'previousButton', label: 'Previous page', unit: 'page', direction: -1 },
   { key: 'nextButton', label: 'Next page', unit: 'page', direction: 1 },
@@ -51,7 +51,8 @@ export const preferencesSchema = z.object({
   cloudFolder: z.string().max(2000), whisperUrl: z.string().max(2000),
   voiceLatency: z.enum(['responsive', 'steady']).default('responsive'),
   whisperModel: z.enum(['tiny', 'base', 'small-q5', 'small', 'turbo-q5']).default('base'),
-  language: z.enum(['de', 'en', 'auto']), provider: z.enum(['whisper', 'browser']),
+  language: z.enum(['de', 'en', 'auto']), provider: z.enum(['whisper', 'browser', 'parakeet']),
+  parakeetAcceleration: z.enum(['cpu', 'directml']).default('cpu'),
   microphoneId: z.string().max(500), countdown: z.number().int().min(0).max(15),
   loop: z.boolean(), speed: z.number().min(20).max(400),
   gamepadEnabled: z.boolean().default(false), previousButton: buttonSchema.default(4), nextButton: buttonSchema.default(5),
@@ -59,6 +60,7 @@ export const preferencesSchema = z.object({
   previousSentenceButton: buttonSchema.default(null), nextSentenceButton: buttonSchema.default(null),
   scrollUpButton: buttonSchema.default(null), scrollDownButton: buttonSchema.default(null),
   gamepadScrollSpeed: z.number().min(20).max(400).default(130),
+  gamepadKeepVoiceActive: z.boolean().default(true), gamepadBackground: z.boolean().default(true),
 }).superRefine((preferences, context) => {
   const assigned = new Set<number>();
   for (const { key } of gamepadActions) {
@@ -72,12 +74,13 @@ export type Profile = keyof Preferences['profiles'];
 export const defaultPreferences: Preferences = {
   profiles: { studio: { ...defaultAppearance, fontSize: 42 }, display: { ...defaultAppearance },
     vr: { ...defaultAppearance, fontSize: 48, transparent: true, width: 90 } },
-  cloudFolder: '', whisperUrl: 'http://127.0.0.1:8080', language: 'de', provider: 'whisper',
+  cloudFolder: '', whisperUrl: 'http://127.0.0.1:8080', language: 'en', provider: 'whisper', parakeetAcceleration: 'cpu',
   whisperModel: 'base', voiceLatency: 'responsive',
   microphoneId: '', countdown: 3, loop: false, speed: 130,
   gamepadEnabled: false, previousButton: 4, nextButton: 5,
   previousParagraphButton: null, nextParagraphButton: null, previousSentenceButton: null, nextSentenceButton: null,
   scrollUpButton: null, scrollDownButton: null, gamepadScrollSpeed: 130,
+  gamepadKeepVoiceActive: true, gamepadBackground: true,
 };
 export type SessionState = {
   script: { id: string; title: string; content: string } | null;
@@ -94,8 +97,8 @@ export const commandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('reset') }), z.object({ type: z.literal('blackout') }),
   z.object({ type: z.literal('seek'), position: z.number().finite() }),
   z.object({ type: z.literal('step'), words: z.number().min(-1000).max(1000) }),
-  z.object({ type: z.literal('navigate'), unit: z.enum(['page', 'paragraph', 'sentence']), direction: z.union([z.literal(-1), z.literal(1)]) }),
-  z.object({ type: z.literal('scroll'), direction: z.union([z.literal(-1), z.literal(0), z.literal(1)]), speed: z.number().min(20).max(400), source: z.string().uuid(), sequence: z.number().int().nonnegative() }),
+  z.object({ type: z.literal('navigate'), unit: z.enum(['page', 'paragraph', 'sentence']), direction: z.union([z.literal(-1), z.literal(1)]), keepVoiceActive: z.boolean().optional() }),
+  z.object({ type: z.literal('scroll'), direction: z.union([z.literal(-1), z.literal(0), z.literal(1)]), speed: z.number().min(20).max(400), source: z.string().uuid(), sequence: z.number().int().nonnegative(), keepVoiceActive: z.boolean().optional() }),
   z.object({ type: z.literal('speed'), speed: z.number().min(20).max(400) }),
   z.object({ type: z.literal('mode'), mode: z.enum(['manual', 'timed', 'voice']) }),
   z.object({ type: z.literal('loop'), loop: z.boolean() }),

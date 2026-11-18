@@ -4,7 +4,7 @@
 
 | Location | Responsibility |
 | --- | --- |
-| `electron/` | Secure desktop shell, native displays, owned Whisper process, verified model downloads and application updates. |
+| `electron/` | Secure desktop shell, native displays/controllers, owned Whisper and Parakeet processes, verified downloads and application updates. |
 | `server/host.ts` | Loopback HTTP API, optional LAN listener, authentication and websocket distribution. |
 | `server/library.ts` | Local SQLite revision index, immutable TXT history and legacy revision validation. |
 | `server/cloud-library.ts` | Current cloud TXT files, metadata, bidirectional reconciliation and backed-up legacy migration. |
@@ -20,9 +20,12 @@ flowchart LR
   Mic[Microphone] --> Capture[Studio audio capture]
   Capture --> Proxy[Loopback speech proxy]
   Proxy --> Whisper[whisper.cpp]
+  Proxy --> Parakeet[Local Parakeet worker]
   Whisper --> Align[Fuzzy script alignment]
+  Parakeet --> Align
   Align --> Session[Authoritative session]
   Studio[Studio controls] --> Session
+  Controller[Native SDL controller service] --> Session
   Session --> Display[External display]
   Session --> Browser[Browser / OBS]
   Session --> VR[OpenKneeboard web dashboard]
@@ -31,6 +34,20 @@ flowchart LR
 ```
 
 Voice highlighting has a separate server-side `VoicePacing` estimate in `shared/voice-pacing.ts`. Local audio capture sends compact, admin-only `voiceActivity` heartbeats tied to the transport revision. The existing 100 ms session tick publishes `voiceHighlight`; it never feeds back into `position` or the matcher. Clients clamp it to the current page and can disable it per profile. Recognition consumes correctly predicted progress and resets wrong or stalled guesses; audio freshness and match expiry bound prediction. Only confirmed positions dim read text and drive scrolling/pagination.
+
+## Native controllers and voice continuity
+
+`electron/controller-service.ts` polls in the main process every 25 ms. `electron/controller-sdl.ts` loads @kmamal/sdl 0.11.13 and SDL 2.32.8 with `SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1` before initialization. Recognized gamepads use standard browser-compatible button ordering, including shoulders 4/5; generic devices retain up to 128 raw buttons. `controllerState` supplies the same snapshots to assignment capture, avoiding separate browser/native numbering during setup.
+
+The service reuses `GamepadInput` and calls the host's trusted `dispatchCommand` path. Native held scrolling sends its own 200 ms heartbeats; the 600 ms session lease stops movement if heartbeats disappear. Renderer timers and window focus are not required to keep a native hold alive. Settings, typing and dialogs suspend actions while the main window is focused; assignment always suspends them. When background input is disabled, blur also suspends controls. Renderer reload/crash invalidates its UI context until a fresh trusted `controllerContext` call arrives. Device loss and shutdown stop held scrolling.
+
+`gamepadKeepVoiceActive` defaults to true. Navigation preserves playback only when a Voice take is already active. During a held scroll the session ignores transcripts and voice-pacing activity; release or lease expiry changes the transport revision before fresh speech can resume. Manual control still pauses timed playback. No controller action implicitly enables the microphone or restarts an explicitly paused take.
+
+## Optional Parakeet runtime
+
+The Windows x64 app offers Parakeet TDT 0.6B v3 INT8 alongside Whisper. `shared/parakeet-manifest.json` pins the ONNX model revision, private Python runtime and wheel artifacts by URL, size and SHA-256. Setup downloads about 731 MB into the application profile, verifies complete files, prepares a staging runtime and publishes it only after an import check. Cancellation retains complete verified downloads for retry.
+
+`electron/parakeet.ts` owns a hidden local worker with bounded line-based request/response handling. Audio is mono PCM16 WAV at 16 kHz. Only one transcription runs at a time. The model stays loaded between chunks; CPU is the default processor, with optional ONNX Runtime DirectML. First startup includes model loading and warmup. Runtime downloads happen during explicit setup; worker inference uses local model files with offline mode enabled. The UI reports the active processor and requires microphone reconnection after voice-setting changes.
 
 ## Data and compatibility
 
@@ -54,7 +71,7 @@ Electron enables sandboxing, context isolation and disables Node integration in 
 
 The host binds to loopback by default. LAN sharing requires a deliberate action and starts a separate listener. Persistent random tokens distinguish admin, read-only output and playback remote. Admin is restricted to loopback even on the LAN listener. Tokens are supplied as URL fragments and then HTTP authorization headers/websocket subprotocols. Output and remote preferences exclude private library paths.
 
-Model IDs come from a fixed enum. Downloads use fixed HTTPS artifact URLs, bounded size and SHA-256 verification, then an atomic publish. Optional models are data, not executable downloads. The packaged speech executable is separately pinned by the setup script. A model manager only terminates its own child process.
+Model IDs come from a fixed enum. Downloads use fixed HTTPS artifact URLs, bounded size and SHA-256 verification, then an atomic publish. Whisper model downloads are data; its packaged executable is separately pinned by the setup script. Optional Parakeet setup also downloads a private executable Python runtime and dependencies from its pinned manifest. The renderer cannot supply arbitrary download or executable URLs. Process managers terminate only the child processes they own.
 
 ## Build and test
 
@@ -78,6 +95,8 @@ npx electron-builder --win nsis portable --x64 --publish never
 ```
 
 The first packaging command produces `release/win-unpacked`; the second builds the Windows x64 NSIS installer and portable executable, plus update metadata. The download requires network access. Release output, models, dependencies, credentials and test profiles must not be committed.
+
+The SDL dependency installs a prebuilt Node-API binding and adjacent SDL2 DLL. Its install script is explicitly allowed in `package.json`; packaging unpacks `node_modules/@kmamal/sdl/dist/**` from ASAR so Windows can load both native files. `npmRebuild` is disabled for the verified prebuilt runtime. Recheck native loading after Electron or SDL upgrades. Parakeet setup resources are packaged with the app; its approximately 731 MB model/runtime payload is downloaded only when the user requests setup.
 
 ## Windows application updates
 

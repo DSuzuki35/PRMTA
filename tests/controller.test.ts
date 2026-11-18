@@ -31,6 +31,8 @@ it('migrates existing page assignments, permits clearing, and rejects duplicate 
   expect(preferencesSchema.safeParse({ ...old, previousButton: null, nextButton: null }).success).toBe(true);
   expect(preferencesSchema.safeParse({ ...old, scrollDownButton: 3 }).success).toBe(false);
   expect(preferencesSchema.safeParse({ ...old, previousSentenceButton: 7, nextParagraphButton: 7 }).success).toBe(false);
+  expect(preferencesSchema.safeParse({ ...old, scrollDownButton: 127 }).success).toBe(true);
+  expect(preferencesSchema.safeParse({ ...old, scrollDownButton: 128 }).success).toBe(false);
 });
 
 it('navigates whole sentences and paragraphs, clamps boundaries, and pauses voice', () => {

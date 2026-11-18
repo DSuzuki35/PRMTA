@@ -9,10 +9,19 @@ export class Session {
   private lastTranscript = '';
   private pacing = new VoicePacing();
   private count = 0;
-  private scroll: { source: string; direction: -1 | 1; speed: number; until: number } | null = null;
+  private scroll: { source: string; direction: -1 | 1; speed: number; until: number; keepVoiceActive: boolean } | null = null;
   private scrollSequences = new Map<string, number>();
   private navigation = new Map<string, number[]>();
   get scrolling() { return this.scroll !== null; }
+  private resetVoiceBoundary() { this.state.transportRevision++; this.pacing.reset(); this.lastTranscript = ''; }
+  private endScroll() {
+    if (!this.scroll) return;
+    // Voice capture can keep running while held, but its in-flight chunks must
+    // never reposition the script after release. No playback state is restored:
+    // an explicit pause, reset, mode change or load remains authoritative.
+    if (this.scroll.keepVoiceActive) this.state.manualScroll = false;
+    this.scroll = null; this.resetVoiceBoundary();
+  }
   private tokens: { content: string; words: Word[] } | null = null;
   // Tokens are cached per loaded content; the content comparison guards against state.script being replaced externally.
   private words(content: string): Word[] {
@@ -26,24 +35,26 @@ export class Session {
     this.command({ type: 'reset' });
   }
   command(command: Command, now = Date.now()) {
-    if (command.type !== 'transcript') this.tick(now);
+    if (command.type !== 'transcript' || this.scroll) this.tick(now);
     if (command.type === 'scroll') {
       if (command.sequence <= (this.scrollSequences.get(command.source) ?? -1)) return;
       this.scrollSequences.set(command.source, command.sequence);
       // Bound client bookkeeping without retaining disconnected tabs indefinitely.
       if (this.scrollSequences.size > 128) this.scrollSequences.delete(this.scrollSequences.keys().next().value!);
       if (command.direction === 0) {
-        if (this.scroll?.source === command.source) this.scroll = null;
+        if (this.scroll?.source === command.source) this.endScroll();
       } else {
-        if (!this.scroll || this.scroll.source !== command.source || this.scroll.direction !== command.direction) {
-          this.state.transportRevision++; this.pacing.reset(); this.lastTranscript = '';
+        const keepVoiceActive = !!command.keepVoiceActive && this.state.mode === 'voice' && this.state.playing && this.count > 0;
+        if (!this.scroll || this.scroll.source !== command.source || this.scroll.direction !== command.direction || this.scroll.keepVoiceActive !== keepVoiceActive) {
+          this.resetVoiceBoundary();
         }
-        this.state.playing = false; this.state.countdownUntil = 0; this.state.manualScroll = true;
-        this.scroll = { source: command.source, direction: command.direction, speed: command.speed, until: now + 600 };
+        if (!keepVoiceActive) { this.state.playing = false; this.state.countdownUntil = 0; }
+        this.state.manualScroll = true;
+        this.scroll = { source: command.source, direction: command.direction, speed: command.speed, until: now + 600, keepVoiceActive };
       }
       this.updateHighlight(); this.state.updatedAt = now; return;
     }
-    if (['play', 'pause', 'reset', 'seek', 'step', 'mode', 'navigate', 'toggle'].includes(command.type)) this.scroll = null;
+    if (['play', 'pause', 'reset', 'seek', 'step', 'mode', 'navigate', 'toggle'].includes(command.type)) this.endScroll();
     if (['play', 'reset', 'seek', 'step', 'mode', 'navigate'].includes(command.type)) this.state.manualScroll = false;
     if (['reset', 'seek', 'mode'].includes(command.type)) this.state.transportRevision++;
     if (['reset', 'seek', 'mode', 'pause'].includes(command.type) || (command.type === 'play' && !this.state.playing)) this.pacing.reset();
@@ -62,7 +73,7 @@ export class Session {
         const key = `${command.unit}:${content}`;
         let starts = this.navigation.get(key);
         if (!starts) { starts = navigationStarts(content, command.unit); this.navigation.set(key, starts); }
-        this.command({ type: 'pause' }, now);
+        if (!(command.keepVoiceActive && this.state.mode === 'voice' && this.state.playing)) this.command({ type: 'pause' }, now);
         this.command({ type: 'seek', position: navigateTo(starts, this.state.position, command.direction) }, now);
         break;
       }
@@ -71,10 +82,10 @@ export class Session {
       case 'mode': this.state.mode = command.mode; this.lastTranscript = ''; break;
       case 'loop': this.state.loop = command.loop; break;
       case 'voiceActivity':
-        if (command.transportRevision === this.state.transportRevision && this.state.playing && this.state.mode === 'voice' && now >= this.state.countdownUntil) this.pacing.audio(command.active, now);
+        if (!this.scroll && command.transportRevision === this.state.transportRevision && this.state.playing && this.state.mode === 'voice' && now >= this.state.countdownUntil) this.pacing.audio(command.active, now);
         break;
       case 'transcript': {
-        if ((command.transportRevision !== undefined && command.transportRevision !== this.state.transportRevision) || !this.state.playing || this.state.mode !== 'voice' || now < this.state.countdownUntil || !this.state.script) break;
+        if (this.scroll || (command.transportRevision !== undefined && command.transportRevision !== this.state.transportRevision) || !this.state.playing || this.state.mode !== 'voice' || now < this.state.countdownUntil || !this.state.script) break;
         const normalized = normalize(command.text);
         if (normalized === this.lastTranscript) break;
         this.lastTranscript = normalized;
@@ -89,7 +100,7 @@ export class Session {
   }
   private updateHighlight() {
     this.state.manualScrollActive = this.scroll !== null;
-    this.state.voiceHighlight = this.state.playing && this.state.mode === 'voice'
+    this.state.voiceHighlight = !this.scroll && this.state.playing && this.state.mode === 'voice'
       ? Math.min(Math.max(0, this.count - 1), this.pacing.preview(this.state.position)) : this.state.position;
   }
   private finish() {
@@ -102,7 +113,7 @@ export class Session {
     if (this.scroll) {
       const seconds = Math.max(0, Math.min(now, this.scroll.until) - this.lastTick) / 1000;
       this.state.position = Math.max(0, Math.min(Math.max(0, this.count - 1), this.state.position + seconds * this.scroll.direction * this.scroll.speed / 60));
-      if (now >= this.scroll.until) this.scroll = null;
+      if (now >= this.scroll.until) this.endScroll();
     }
     if (this.state.playing) {
       const from = Math.max(this.lastTick, this.state.countdownUntil);

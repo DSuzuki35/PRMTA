@@ -17,7 +17,7 @@ export async function startSpeech(preferences: Preferences, onText: (text: strin
     const Recognition = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
     if (!Recognition) throw new Error('This browser does not support speech recognition. Use local Whisper.');
     const recognition = new Recognition(); recognition.continuous = true; recognition.interimResults = true;
-    recognition.lang = preferences.language === 'en' ? 'en-US' : 'de-DE'; let stopped = false; let retry: ReturnType<typeof setTimeout> | undefined;
+    recognition.lang = preferences.language === 'de' ? 'de-DE' : 'en-US'; let stopped = false; let retry: ReturnType<typeof setTimeout> | undefined;
     const stop = () => { stopped = true; clearTimeout(retry); recognition.abort(); };
     const fatal = (message: string) => { if (stopped) return; stop(); onEnded(message); };
     recognition.onresult = (event: any) => { let text = ''; for (let i = Math.max(0, event.resultIndex - 1); i < event.results.length; i++) text += event.results[i][0].transcript + ' '; if (captureKey()) onText(text); };
@@ -26,9 +26,13 @@ export async function startSpeech(preferences: Preferences, onText: (text: strin
     recognition.start(); onStatus('Browser listening · may use an online service');
     return stop;
   }
-  const status = await api<{ ok: boolean; message: string }>(`/speech/status?whisperUrl=${encodeURIComponent(preferences.whisperUrl)}`);
-  const models = await api<{ managed: boolean }>('/speech/models');
-  if (models.managed || !status.ok) await api('/speech/start', { whisperUrl: preferences.whisperUrl, model: preferences.whisperModel });
+  const parakeet = preferences.provider === 'parakeet';
+  if (parakeet) await api('/speech/parakeet/start', { acceleration: preferences.parakeetAcceleration });
+  else {
+    const status = await api<{ ok: boolean; message: string }>(`/speech/status?whisperUrl=${encodeURIComponent(preferences.whisperUrl)}`);
+    const models = await api<{ managed: boolean }>('/speech/models');
+    if (models.managed || !status.ok) await api('/speech/start', { whisperUrl: preferences.whisperUrl, model: preferences.whisperModel });
+  }
   const stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: preferences.microphoneId ? { exact: preferences.microphoneId } : undefined, channelCount: 1, echoCancellation: true, noiseSuppression: true }, video: false });
   let context: AudioContext;
   try { context = new AudioContext(); await context.resume(); }
@@ -40,7 +44,7 @@ export async function startSpeech(preferences: Preferences, onText: (text: strin
   const fatal = (message: string) => { if (stopped) return; stop(); onEnded(message); };
   try {
   source = context.createMediaStreamSource(stream);
-  // Fixed-size PCM capture. Audio never leaves the loopback Whisper service.
+  // Fixed-size PCM capture. Audio stays with the selected local recognition service.
   processor = context.createScriptProcessor(4096, 1, 1); mute = context.createGain(); mute.gain.value = 0;
   source.connect(processor); processor.connect(mute); mute.connect(context.destination);
   const timing = voiceTiming[preferences.voiceLatency];
@@ -57,7 +61,7 @@ export async function startSpeech(preferences: Preferences, onText: (text: strin
     const rms = Math.sqrt(energy / data.length); if (rms > .008) lastVoice = Date.now();
     const now = Date.now(), active = activity.sample(rms, now);
     if (key && (active !== lastActivity || now - activitySentAt >= 180)) { onActivity(active); lastActivity = active; activitySentAt = now; }
-    if (Date.now() - lastMeter >= 180) { lastMeter = Date.now(); onStatus(!key ? 'Microphone ready · press Play to follow' : rms > .008 ? 'Local Whisper listening' : 'Waiting for speech', Math.round(Math.min(1, rms * 12) * 12) / 12); }
+    if (Date.now() - lastMeter >= 180) { lastMeter = Date.now(); onStatus(!key ? 'Microphone ready · press Play to follow' : rms > .008 ? `Local ${parakeet ? 'Parakeet' : 'Whisper'} listening` : 'Waiting for speech', Math.round(Math.min(1, rms * 12) * 12) / 12); }
     if (!key) return;
     chunks.push(data); total += data.length;
     while (total > context.sampleRate * timing.window && chunks.length > 1) total -= chunks.shift()!.length;
@@ -66,7 +70,7 @@ export async function startSpeech(preferences: Preferences, onText: (text: strin
     if (busy || !key || captureKey() !== key || total < context.sampleRate * timing.minimum || Date.now() - lastVoice > 2200) return;
     busy = true; const requestKey = key, requestEpoch = epoch; const data = new Float32Array(total); let offset = 0;
     for (const chunk of chunks) { data.set(chunk, offset); offset += chunk.length; }
-    try { const response = await api<{ text: string }>(`/speech?whisperUrl=${encodeURIComponent(preferences.whisperUrl)}`, undefined, wav(data, context.sampleRate)); if (!stopped && epoch === requestEpoch && captureKey() === requestKey && response.text) onText(response.text); }
+    try { const response = await api<{ text: string }>(parakeet ? '/speech?provider=parakeet' : `/speech?whisperUrl=${encodeURIComponent(preferences.whisperUrl)}`, undefined, wav(data, context.sampleRate)); if (!stopped && epoch === requestEpoch && captureKey() === requestKey && response.text) onText(response.text); }
     catch (error) { if (!stopped) onStatus(String(error)); }
     finally { busy = false; }
   }, timing.interval);

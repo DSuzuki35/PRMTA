@@ -1,6 +1,6 @@
 # PRMTA user guide
 
-PRMTA is a Windows teleprompter studio with a local script library. The interface is English; scripts and local speech recognition support German and English. No account is needed.
+PRMTA is a Windows teleprompter studio with a local script library. The interface is English; scripts and local speech recognition support German and English. Optional Parakeet automatically detects 25 supported languages. New profiles use English for Whisper and browser recognition. No account is needed.
 
 ## Your first take
 
@@ -54,7 +54,7 @@ Draft backups belong to the studio URL's origin. If port 4317 is occupied and PR
 
 There are three independent appearance profiles: **Studio preview**, **External display / browser**, and **VR / OpenKneeboard**. Select the profile in the inspector to edit its font size, line height, text width, reading line, alignment, colors, highlighting, dimming, mirroring and background opacity (0–100%). Background opacity does not fade the text. Transparent browser/OBS/VR output is supported; native monitor windows retain an opaque Windows surface.
 
-**Smooth voice highlighting** under **Reading area** uses local microphone activity and your recent speaking pace to preview up to two words between Whisper results. Recognition corrects the estimate; silence stops its advance. The option is independent for each profile and does not change the confirmed position, mark guesses as read or turn a page early. It requires **Highlight current word** and local Whisper.
+**Smooth voice highlighting** under **Reading area** uses local microphone activity and your recent speaking pace to preview up to two words between recognition results. Recognition corrects the estimate; silence stops its advance. The option is independent for each profile and does not change the confirmed position, mark guesses as read or turn a page early. It requires **Highlight current word** and local Whisper or Parakeet.
 
 **Continuous at reading line** keeps the current word near the chosen vertical guide. Set the reading line to 50% for the middle. **Page by page** keeps the current page visible and changes pages as voice or timed playback progresses. Current-word highlighting works in either mode. In page mode, enable **Preview next line** to see the first line of the next page in muted gray below the current page. It is included in the fit calculation and disappears on the last page. **Smooth line transitions** in continuous mode animates line changes during playback; switch it off for immediate positioning. Loading a script always pauses at its first word, including the visible scroll position.
 
@@ -69,6 +69,16 @@ Use Tab and Shift+Tab to move between controls. The first focusable link skips t
 Quick start and Version history keep keyboard focus inside the dialog. Escape closes the dialog and returns focus to the opener. Playback shortcuts do not run while a dialog is open. Button state is exposed for voice, playback mode, blackout and favorites.
 
 Control borders, muted interface text and click targets have been strengthened. Appearance colors and dimming remain user-configurable. Automated checks cover standard screens at 800 and 1440 pixels wide; they are not a complete accessibility certification or a replacement for assistive-technology user testing.
+
+## Optional Parakeet voice recognition
+
+1. Turn off the microphone before changing recognition settings.
+2. Open **Settings > Voice follow > Speech recognition** and select **NVIDIA Parakeet · local**.
+3. Leave **Parakeet processing** on **CPU · recommended for consistent response**, then click **Set up Parakeet**.
+4. Wait for the approximately 731 MB download, verification and first startup. Setup installs a private runtime automatically; no terminal commands or separate Python installation are needed. You can cancel the download and retry later.
+5. When **Parakeet ready** appears, return to the prompter, enable voice and press Play.
+
+Parakeet detects the spoken language automatically, including English and German, so **Script language** is disabled for this provider. **GPU · DirectML** is optional and can be slower for short chunks or take longer to start. Turn off and reconnect the microphone after changing the processor or other voice settings. Audio stays on this computer after setup. See the [voice guide](VOICE.md#nvidia-parakeet-optional) for details.
 
 ## Elgato Prompter and external displays
 
@@ -113,7 +123,7 @@ Links contain bearer access tokens: anyone with a remote link on the enabled net
 
 Shortcuts work while the studio or remote has focus and you are not typing in a field. They are not system-wide shortcuts. Keyboard presenters and foot pedals can send these keys.
 
-For controllers, enable **Enable controller buttons** in **Settings → Joystick / Gamepad**, connect the device, and press a button once so the browser can expose it. Eight actions can be assigned:
+For controllers, enable **Enable controller buttons** in **Settings → Joystick / Gamepad** and connect the device. The Windows app reads controllers natively, including generic joysticks and HOTAS devices. In a browser-only studio, press a button once so the browser can expose it. Eight actions can be assigned:
 
 | Action pair | Behavior |
 | --- | --- |
@@ -122,11 +132,15 @@ For controllers, enable **Enable controller buttons** in **Settings → Joystick
 | Previous / next sentence | Navigate sentence boundaries. |
 | Scroll up / down | Hold to scroll smoothly; release to stop. |
 
-Previous and next page default to zero-based Gamepad API button indices 4 and 5 (commonly the shoulder buttons). The other actions begin unassigned. Click **Assign button**, then press and release the desired button. A full release → press → release cycle is required, so stuck or initially held buttons are ignored. A disconnect does not count as release. Escape cancels assignment. A button cannot be assigned to two actions; clear its existing assignment before moving it.
+Previous and next page default to zero-based indices 4 and 5, the shoulder buttons on standard mapped gamepads. Generic devices expose up to 128 raw buttons; their native numbering may differ from older browser bindings. Use **Assign button** to confirm each binding. The other actions begin unassigned. A full release → press → release cycle is required, so stuck or initially held buttons are ignored. A disconnect does not count as release. Escape cancels assignment. A button cannot be assigned to two actions; clear its existing assignment before moving it.
 
-**Held scroll speed (WPM)** sets 20–400 words per minute, independent of the Auto playback speed. Manual controller navigation pauses the take so voice or timed playback cannot immediately pull it away. Previous/next jumps to the adjacent unit; Previous goes to the previous unit even if you are midway through the current one. At the first or last unit, navigation stays at that boundary.
+**Held scroll speed (WPM)** sets 20–400 words per minute, independent of the Auto playback speed. Previous/next jumps to the adjacent unit; Previous goes to the previous unit even if you are midway through the current one. At the first or last unit, navigation stays at that boundary.
 
-Held scrolling temporarily uses continuous text, including on outputs configured for pages. A **Manual scroll** notice explains the temporary layout. Release stops at the current position; page layout returns on navigation, playback or reset. Controller navigation is suspended in Settings, while typing, and when a dialog is open. Lost focus or a disconnected controller stops held scrolling. Joysticks that do not expose a browser gamepad interface need a keyboard mapping utility.
+**Controller input in background** is enabled by default in the Windows app. Buttons work while another application has focus or PRMTA is minimized. Settings, text fields and dialogs suspend controls while PRMTA is focused; button assignment always suspends navigation, even in the background. Disable background input to require the PRMTA window to have focus. Browser-only controller input still requires the studio tab to have focus. Keyboard shortcuts remain local to the focused window.
+
+**Keep voice follow active** is enabled by default. If a Voice take is already playing, controller navigation keeps it active at the new passage. During a held scroll, manual movement takes priority over recognized speech; release resumes following from fresh audio at the new position. This option does not start a paused take or microphone. Turn it off to pause playback whenever you navigate with the controller. Auto playback always pauses for manual controller navigation.
+
+Held scrolling temporarily uses continuous text, including on outputs configured for pages. A **Manual scroll** notice explains the temporary layout. Release stops manual movement. When active voice following is preserved, page layout and voice following resume on release; otherwise page layout returns on navigation, playback or reset. A disconnected device, assignment session or unavailable controller backend stops held scrolling. After a reconnect or suspended input, release held buttons before pressing again.
 
 ![Controller assignments and scrolling speed](images/controllers.png)
 
@@ -163,8 +177,13 @@ To back up the whole application, close PRMTA and copy its profile folder. New i
 | Voice does not advance | Microphone on, Voice mode, Play, countdown finished, correct script language, and words near the current position. Click the correct passage after a large jump. |
 | Voice lags behind | Try Base or Tiny; use a closer microphone; close CPU-heavy apps. See the [voice guide](VOICE.md). |
 | Model will not start | Download it first. If another app or server uses the Whisper port, choose a free **Whisper port** in Settings (e.g. 18080), click **Apply server**, then **Set up voice** and reconnect the microphone. |
+| Parakeet is not ready | Finish **Set up Parakeet**, retry any failed download, and use CPU processing first. Allow the initial model startup to complete, then reconnect the microphone. |
+| Controller stops when switching apps | Use the Windows desktop app and enable **Controller input in background**. Finish or cancel any button assignment. Browser-only controls need focus. |
+| Controller button does the wrong action | Reassign it using **Assign button**; native raw joystick numbering can differ from browser numbering. |
 | Blank/unauthorized browser output | Copy a fresh link from Outputs, including its `#token` fragment. |
 | LAN device cannot connect | Same network, private-network firewall allowance, network sharing enabled, no Wi-Fi client isolation. |
 | Cloud sync reports errors | Folder available offline and writable, valid `.prmta` metadata, and no older PRMTA instance writing legacy revisions into it. |
 | Screen size changed | Refresh Outputs or reopen the output window after changing Windows display scaling. |
 | Library changes do not appear on air | Load the edited script again; an active take deliberately keeps its original snapshot. |
+
+If native controller initialization fails, PRMTA retains foreground browser controller input and shows its limited mode in Settings. Reassign buttons if their numbers differ. A transient device failure never enables both input paths at once; healthy native devices keep working.

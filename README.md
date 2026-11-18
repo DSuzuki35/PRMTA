@@ -11,11 +11,11 @@
 - **External displays:** dedicated fullscreen output on any Windows monitor, including Elgato Prompter.
 - **Browser and OBS:** clean, synchronized output with adjustable background opacity and mirroring.
 - **VR:** transparent OpenKneeboard Web Dashboard output with an independent appearance profile.
-- **Local voice follow:** bundled multilingual Whisper Base, forgiving nearby script alignment, waveform-gated predictive word highlighting, and selectable Tiny, Small, quantized Small and quantized Large v3 Turbo models.
+- **Local voice follow:** bundled multilingual Whisper Base, optional NVIDIA Parakeet TDT v3, forgiving nearby script alignment and waveform-gated predictive word highlighting. Whisper also offers Tiny, Small, quantized Small and quantized Large v3 Turbo models.
 - **Your pace:** timed WPM scrolling, voice following or manual navigation; continuous reading-line and page-by-page layouts, optional smooth line transitions and wheel navigation.
 - **Script library:** UTF-8 TXT revisions, SQLite indexing, folders, tags, favorites, search, autosave, draft recovery, local version history, reversible local trash and an editor that expands inside the app window.
 - **Cloud libraries:** one current, readable TXT per script in a Dropbox, OneDrive or iCloud Drive folder. Edits and deletions work both ways; choose whether to copy current scripts when switching libraries.
-- **Control options:** keyboard shortcuts, eight assignable gamepad/joystick actions for pages, paragraphs, sentences and smooth held scrolling, keyboard foot pedals and an optional phone remote over your private LAN.
+- **Control options:** eight assignable gamepad/joystick actions for pages, paragraphs, sentences and smooth held scrolling. Native Windows controller input works while another app is focused or PRMTA is minimized, with an option to keep voice following active. Keyboard shortcuts, keyboard foot pedals and a private-LAN phone remote are also available.
 - **Windows updates:** the installed app checks for new releases and downloads updates in the background. Restart and install when your take is finished.
 - **English interface:** designed with the [Dan Suzuki UI Kit](https://dansuzuki.com/ui-kit/), with locally bundled fonts. Script content can remain in its original language.
 
@@ -52,6 +52,8 @@ Start with **Base** for low overhead. Try **Small Q5** when you need more accura
 
 Optional models install from Settings with progress and SHA-256 verification. A compatible external whisper.cpp server can use other models or GPU acceleration. Browser speech recognition is also offered, but depends on the browser and may use an online service. Read the [voice guide](docs/VOICE.md) for setup, tradeoffs and the exact endpoint contract.
 
+For **Parakeet**, open **Settings > Voice follow > Speech recognition**, select **NVIDIA Parakeet · local**, and click **Set up Parakeet**. Setup downloads about 731 MB of verified model and private runtime files; no separate Python installation or terminal commands are needed. CPU processing is recommended; optional DirectML GPU processing is available. Parakeet automatically detects 25 supported languages, including English and German. New profiles default to English for Whisper and browser recognition; saved language choices are preserved. See the [Parakeet setup guide](docs/VOICE.md#nvidia-parakeet-optional).
+
 ## Documentation
 
 | Guide | Contents |
@@ -83,12 +85,12 @@ npm run package
 npx electron-builder --win nsis portable --x64 --publish never
 ```
 
-`npm run serve` starts the browser studio after a build. Model downloads and native display selection are desktop features; configure an external local Whisper server for the standalone browser host.
+`npm run serve` starts the browser studio after a build. Managed Parakeet setup, model downloads, background controller input and native display selection are desktop features; configure an external local Whisper server for the standalone browser host.
 
 ## Scope and privacy
 
-PRMTA keeps scripts and default speech recognition local. Cloud-folder contents are uploaded by the cloud client you choose. Optional model downloads use the official whisper.cpp model repository. LAN sharing is opt-in and intended for trusted private networks; output and remote links are access credentials.
+PRMTA keeps scripts and local speech recognition on your computer. Cloud-folder contents are uploaded by the cloud client you choose. Optional Whisper models use the official whisper.cpp model repository. Parakeet setup downloads pinned model and runtime files from Hugging Face, Python.org and PyPI, verifies their size and SHA-256, and runs locally afterward. LAN sharing is opt-in and intended for trusted private networks; output and remote links are access credentials.
 
-This release uses OpenKneeboard for VR rather than shipping a native OpenXR layer. It does not integrate Wispr Flow, promise semantic paraphrase tracking, or provide a built-in GPU runtime. Physical Elgato/VR/controller combinations require testing on your hardware. See [verification](docs/verification.md).
+This release uses OpenKneeboard for VR rather than shipping a native OpenXR layer. It does not integrate Wispr Flow or promise semantic paraphrase tracking. Whisper's included engine uses CPU; Parakeet's optional runtime offers CPU or DirectML. Physical Elgato/VR/controller combinations require testing on your hardware. See [verification](docs/verification.md).
 
 The source is public for inspection. No general open-source license has been assigned to PRMTA itself. Third-party components retain their own licenses; see [third-party notices](THIRD-PARTY-NOTICES.md) and [licenses](licenses).

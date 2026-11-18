@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.1 - Background controllers and optional Parakeet
+
+- Added native SDL controller input in the Windows app, including generic joysticks/HOTAS and up to 128 raw buttons. Input continues while another app has focus or PRMTA is minimized.
+- Added **Controller input in background** and **Keep voice follow active**, both enabled by default. Active voice following continues after controller navigation; held scrolling takes priority until release, then fresh speech resumes following.
+- Unified native assignment snapshots and live button handling, preserved standard gamepad shoulder defaults, and retained full release/press/release capture and disconnect safeguards.
+- Added optional local NVIDIA Parakeet TDT 0.6B v3 INT8 recognition, automatic detection of 25 supported languages, and guided setup of the verified model and private runtime (about 731 MB).
+- Added recommended CPU processing and optional DirectML GPU processing for Parakeet, with setup progress, cancellation, retry and processor status.
+- Changed the default script language for new profiles to English. Existing language preferences remain unchanged; Parakeet detects language automatically.
+- Updated English setup instructions, controller guidance and third-party attribution.
+
 ## 0.3.0 - Controller navigation and Windows updates
 
 - Added eight assignable controller actions: previous/next page, paragraph and sentence, plus hold-to-scroll up/down.

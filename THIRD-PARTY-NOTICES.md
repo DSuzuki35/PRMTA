@@ -17,3 +17,25 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 ## Fonts and visual design
 
 Inter, Archivo and DM Mono are bundled under the SIL Open Font License 1.1. Exact font license files are included in licenses/Inter-OFL.txt, licenses/Archivo-OFL.txt and licenses/DM-Mono-OFL.txt. Visual styling follows the Dan Suzuki UI Kit (https://dansuzuki.com/ui-kit/). The implementation and screenshots are PRMTA-specific.
+
+## Native Windows controller input
+
+The Windows app includes @kmamal/sdl 0.11.13 (MIT license, https://github.com/kmamal/node-sdl) and SDL 2.32.8 (zlib license, https://github.com/libsdl-org/SDL). Their original license texts are included in licenses/kmamal-sdl-LICENSE.txt and licenses/SDL2-LICENSE.txt. SDL provides native gamepad and generic joystick input independently of browser focus.
+
+## Optional Parakeet downloads
+
+Parakeet setup is optional and downloads the following components into the user's private application profile. The model is **NVIDIA Parakeet TDT 0.6B v3**, by NVIDIA, provided under [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/). PRMTA uses the INT8 ONNX conversion published by **Ilya Stupakov**, converted and quantized from the original model. Sources and model documentation: [NVIDIA original](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3), [Ilya Stupakov's ONNX conversion](https://huggingface.co/istupakov/parakeet-tdt-0.6b-v3-onnx). PRMTA does not claim authorship of these model weights.
+
+| Runtime component | License |
+| --- | --- |
+| Python 3.13.17 | Python Software Foundation license and included historical/component notices. |
+| onnx-asr 0.12.0, copyright Ilya Stupakov | MIT. |
+| ONNX Runtime DirectML package 1.24.4, copyright Microsoft Corporation | MIT; bundled components retain the notices distributed with the package. |
+| NumPy 2.5.5 | BSD-3-Clause for NumPy; bundled components additionally include 0BSD, MIT, zlib, CC0 and other notices in the wheel. |
+| FlatBuffers 25.12.19 | Apache License 2.0. |
+| packaging 26.3 | Apache License 2.0 OR BSD-2-Clause. |
+| Protocol Buffers 7.36.2 | BSD-3-Clause. |
+| SymPy 1.14.0 | BSD. |
+| mpmath 1.3.0 | BSD. |
+
+The exact artifact versions, URLs and SHA-256 hashes are recorded in `shared/parakeet-manifest.json`. Original Python licenses, wheel license files and ONNX Runtime's `ThirdPartyNotices.txt` remain in the managed runtime and downloaded wheel archives. These notices summarize attribution; the original component license texts remain authoritative.
