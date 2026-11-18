@@ -4,7 +4,7 @@ PRMTA is a Windows teleprompter studio with a local script library. The interfac
 
 ## Your first take
 
-1. Start `PRMTA-0.2.4-Windows-x64.exe`. Keep the application open during your take.
+1. Start `PRMTA-0.2.5-Windows-x64.exe`. Keep the application open during your take.
 2. Click **Try a sample**, or **Create script** to write your own.
 3. In **Library**, name the script, paste your text and click **Load in prompter**. Editing autosaves after a short pause. The save indicator confirms success.
 4. Choose **Auto**, **Voice**, or **Manual**. Press **Play** or Space.
@@ -29,6 +29,10 @@ This starts a new page.
 `==highlight==` marks important words, and `**bold**` adds emphasis. A line containing only `---` or `\---` starts a page; it is a page break rather than an ordinary line break. Use Enter for a line break and a blank line for a paragraph. Heading markers such as `# ` are hidden in the prompter. Other Markdown is treated as text. These markers remain intact in TXT exports.
 
 Without explicit page separators, page mode packs complete sentences into pages of roughly 60 words. An overlong sentence can split at a comma, semicolon, colon or dash; text without usable punctuation stays intact. Common abbreviations and numeric decimal separators do not create page breaks. Explicit separators take precedence. In page mode, Font size is an upper limit: long pages shrink to the largest size that fits each output. Increasing the limit never makes text smaller. A size plateau means the page is full; add a page break or widen the reading area to make its text larger. Each browser source fits its own viewport dimensions.
+
+Use **Expand editor** at the top right of the editor to fill the PRMTA window. **Esc** or **Exit expanded editor** returns to the library layout without losing the current draft. This does not enter operating-system fullscreen.
+
+![Expanded script editor](images/editor-expanded.png)
 
 Use folders, comma-separated tags, favorites and search to organize scripts. Production notes do not appear in the output. Trash is reversible. **History** shows previous revisions. Restoring a revision creates a new version; it does not erase the old versions. Duplicate a script to create an independent copy.
 
@@ -111,13 +115,19 @@ Shortcuts work while the studio or remote has focus and you are not typing in a 
 
 For controllers, enable **Controller buttons** in Settings, connect the device, and press a button once so the browser can expose it. Previous and next page use zero-based Gamepad API button indices, defaulting to 4 and 5 (commonly the shoulder buttons). Click **Assign button**, then press and release the desired button. A full release → press → release cycle is required, so stuck or initially held buttons are ignored. A disconnect does not count as release. Escape cancels assignment. Page navigation is suspended while Settings is open. Joysticks that do not expose a browser gamepad interface need a keyboard mapping utility.
 
-## Cloud folder and backup
+## Cloud libraries and backup
 
 Choose a local folder inside Dropbox, OneDrive or iCloud Drive in **Settings → Script library & cloud**. Install and sign into that service's own sync client first. Prefer a dedicated folder with files available offline. PRMTA does not sign in to cloud services itself.
 
-Each revision has a TXT body and a `.prmpt.json` metadata sidecar. The legacy sidecar extension is retained for compatibility. Keep both files together. The active SQLite database stays outside the cloud folder. Sync runs every five seconds and can also be triggered manually.
+Click **Open cloud library** and choose **Open folder only** or **Copy current scripts**. Opening only uses the scripts already there; it does not merge your local library automatically. Copying keeps existing scripts and skips matching ones. **Use local library** returns to the separate library on this computer without copying cloud scripts back. The sidebar and each script card identify the active storage location.
 
-Parallel edits create multiple heads and a visible conflict. Compare History and restore the version you want, or copy text into a new script. All existing revisions are retained. Sync cannot guarantee cloud-provider delivery order or replace off-device backups. Do not edit immutable revision files by hand: import an edited TXT as a new script instead.
+![Choose how to open a cloud library](images/cloud-switch.png)
+
+The cloud folder contains one current, human-readable `.txt` per active script. Renaming in PRMTA renames that file. New TXT files and edits made outside PRMTA are picked up automatically, normally within five seconds. Deleting a script in PRMTA removes its current cloud TXT; deleting the TXT externally moves the cached script to local Trash. Restore recreates its TXT. Files are flat in the selected folder; organizational folders in the editor are metadata, not filesystem subfolders.
+
+Current metadata (identity, tags, notes and favorites) lives in `.prmta/library.json`. Keep that helper directory with the TXT files. The SQLite cache, version history and Trash stay on this computer, outside the cloud folder. History is not a shared cross-device archive. A missing or unreadable cloud folder does not erase the local recovery copy. If an interrupted save conflicts with a newer external edit, **Settings > Recovered drafts** lets you **Export TXT** or **Restore copy** without replacing the external version. PRMTA cannot confirm the provider has uploaded files online. Keep the cloud folder available offline and let the provider finish syncing before editing on another computer.
+
+Older folders containing UUID-named revision TXT/JSON pairs wait for confirmation in the Open cloud library dialog, then are converted after a verified local backup. Only the current, non-deleted scripts remain as ordinary TXT files; the old revision files are removed from the cloud folder. Settings shows the backup location. Resolve any reported legacy revision conflicts before conversion. Do not use PRMTA 0.2.4 or older on a converted folder.
 
 To back up the whole application, close PRMTA and copy its profile folder. New installations normally use `%APPDATA%\PRMTA`; upgrades can continue using `%APPDATA%\PRMPT`. Settings shows the actual library path. Copying while open requires handling SQLite WAL files correctly, so closing first is simpler.
 
@@ -130,6 +140,6 @@ To back up the whole application, close PRMTA and copy its profile folder. New i
 | Model will not start | Download it first. Stop a separately started server on port 8080 if you want PRMTA to manage the model. |
 | Blank/unauthorized browser output | Copy a fresh link from Outputs, including its `#token` fragment. |
 | LAN device cannot connect | Same network, private-network firewall allowance, network sharing enabled, no Wi-Fi client isolation. |
-| Cloud sync reports errors | Files available locally, writable dedicated folder, both metadata and TXT present, no manual edits to revision files. |
+| Cloud sync reports errors | Folder available offline and writable, valid `.prmta` metadata, and no older PRMTA instance writing legacy revisions into it. |
 | Screen size changed | Refresh Outputs or reopen the output window after changing Windows display scaling. |
 | Library changes do not appear on air | Load the edited script again; an active take deliberately keeps its original snapshot. |

@@ -12,7 +12,7 @@ export async function api<T>(path: string, body?: unknown, raw?: Blob | ArrayBuf
   return response.json();
 }
 export const command = (body: Command) => api<SessionState | null>('/command', body);
-export type StateMessage = { type: string; session?: SessionState; preferences?: Preferences };
+export type StateMessage = { type: string; session?: SessionState; preferences?: Preferences; workspace?: string; upgradeRequired?: boolean };
 export type Display = { id: number; label: string; width: number; height: number; primary: boolean };
 declare global {
   interface Window {

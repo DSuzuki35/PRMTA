@@ -1,21 +1,25 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import { createServer, type Server } from 'node:http';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, createHash } from 'node:crypto';
+import { mkdirSync } from 'node:fs';
 import { networkInterfaces } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join, resolve, relative, parse } from 'node:path';
 import { WebSocketServer, WebSocket } from 'ws';
 import mammoth from 'mammoth';
 import { z, ZodError } from 'zod';
 import { Library } from './library';
+import { CloudLibrary } from './cloud-library';
 import { Session } from './session';
-import { commandSchema, defaultPreferences, draftSchema, preferencesSchema } from '../shared/model';
+import { commandSchema, defaultPreferences, draftSchema, preferencesSchema, type Draft } from '../shared/model';
 import { modelById, type ModelsInfo } from '../shared/whisper-models';
 
 type Role = 'admin' | 'output' | 'remote';
 type AuthRequest = Request & { role?: Role };
 const isLocal = (address?: string) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address ?? '');
 export async function createHost(options: { dataDir: string; port?: number; staticDir?: string; ensureSpeech?: (url: string, model: string) => Promise<void>; models?: { list: () => ModelsInfo; install: (id: string) => void } }) {
-  const library = new Library(options.dataDir); const session = new Session();
+  const localLibrary = new Library(options.dataDir); let library = localLibrary;
+  let cloud: CloudLibrary | null = null;
+  const opened = new Map<string, Library>(); const session = new Session();
   let preferences = preferencesSchema.parse(library.getSetting('preferences', defaultPreferences));
   const tokens = library.getSetting<Record<Role, string>>('tokens', { admin: randomBytes(32).toString('hex'), output: randomBytes(32).toString('hex'), remote: randomBytes(32).toString('hex') });
   library.setSetting('tokens', tokens);
@@ -24,6 +28,23 @@ export async function createHost(options: { dataDir: string; port?: number; stat
   const servers: Server[] = []; let lan: Server | null = null; let lanPort = 0;
   let syncStatus = { errors: [] as string[], imported: 0, exported: 0, at: '' };
   let speechBusy = false;
+  const approvedClouds = localLibrary.getSetting<string[]>('approvedCloudLibraries', []);
+  let upgradeRequired = !!preferences.cloudFolder && !approvedClouds.includes(resolve(preferences.cloudFolder));
+  const workspaceKey = () => cloud ? `cloud:${createHash('sha256').update(cloud.folder.toLowerCase()).digest('hex').slice(0, 24)}` : 'local';
+  const openCloud = (folder: string, create = false) => {
+    const root = resolve(folder), local = resolve(options.dataDir);
+    const inside = (a: string, b: string) => { const r = relative(a, b); return !r || (!r.startsWith('..') && !r.includes(':')); };
+    if (root === parse(root).root || inside(local, root) || inside(root, local)) throw new Error('Choose a separate scripts folder outside the application database.');
+    if (create) mkdirSync(root, { recursive: true });
+    const key = createHash('sha256').update(process.platform === 'win32' ? root.toLowerCase() : root).digest('hex');
+    let cache = opened.get(key);
+    if (!cache) { cache = new Library(join(options.dataDir, 'workspaces', key)); opened.set(key, cache); }
+    return new CloudLibrary(cache, root, join(options.dataDir, 'backups'));
+  };
+  if (preferences.cloudFolder && !upgradeRequired) {
+    try { cloud = openCloud(preferences.cloudFolder); library = cloud.library; cloud.sync(); }
+    catch (e) { syncStatus.errors = [String(e)]; }
+  }
   app.disable('x-powered-by');
   app.use((_req, res, next) => {
     res.setHeader('Referrer-Policy', 'no-referrer'); res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -42,7 +63,7 @@ export async function createHost(options: { dataDir: string; port?: number; stat
   };
   const admin = allow('admin'); const control = allow('admin', 'remote');
   app.use(express.json({ limit: '2mb' }));
-  const state = (role: Role) => ({ type: 'state', session: session.snapshot(), preferences: role === 'admin' ? preferences : { profiles: preferences.profiles, countdown: preferences.countdown } });
+  const state = (role: Role) => ({ type: 'state', session: session.snapshot(), workspace: role === 'admin' ? workspaceKey() : undefined, upgradeRequired: role === 'admin' ? upgradeRequired : undefined, preferences: role === 'admin' ? preferences : { profiles: preferences.profiles, countdown: preferences.countdown } });
   const broadcast = (kind: 'state' | 'tick' | 'library') => {
     for (const [ws, role] of sockets) {
       if (ws.readyState !== WebSocket.OPEN || ws.bufferedAmount > 2_000_000) continue;
@@ -51,17 +72,33 @@ export async function createHost(options: { dataDir: string; port?: number; stat
     }
   };
   const sync = () => {
-    try { syncStatus = { ...library.sync(preferences.cloudFolder), at: new Date().toISOString() }; if (syncStatus.imported) broadcast('library'); }
+    if (upgradeRequired) return { ...syncStatus, errors: ['Open your cloud library in Settings to confirm the new folder format.'] };
+    try { syncStatus = { ...(cloud ? cloud.sync() : { errors: [], imported: 0, exported: 0 }), at: new Date().toISOString() }; if (syncStatus.imported) broadcast('library'); }
     catch (e) { syncStatus = { errors: [String(e)], imported: 0, exported: 0, at: new Date().toISOString() }; }
     return syncStatus;
   };
   app.get('/api/state', (req: AuthRequest, res) => res.json(state(req.role!)));
-  app.get('/api/scripts', admin, (_req, res) => res.json(library.list()));
+  app.get('/api/scripts', admin, (_req, res) => res.json(library.list().map(s => ({ ...s, workspace: workspaceKey(), storage: cloud ? 'cloud' : 'local' }))));
   app.post('/api/scripts', admin, (req, res) => {
-    const body = z.object({ draft: draftSchema, expectedHeads: z.array(z.string().uuid()).max(100) }).parse(req.body);
-    const saved = library.save(body.draft, body.expectedHeads); broadcast('library'); res.json(saved);
+    const body = z.object({ draft: draftSchema, expectedHeads: z.array(z.string().uuid()).max(100), workspace: z.string().optional() }).parse(req.body);
+    if (body.workspace !== undefined ? body.workspace !== workspaceKey() : !!cloud) { res.status(409).json({ error: 'Library changed. Reopen the script in the active library before saving.' }); return; }
+    try {
+      const saved = cloud ? cloud.save(body.draft, body.expectedHeads) : library.save(body.draft, body.expectedHeads); res.json({ ...saved, workspace: workspaceKey(), storage: cloud ? 'cloud' : 'local' });
+    } finally { broadcast('library'); } // A rejected save may already have imported an external edit.
   });
   app.get('/api/scripts/:id/history', admin, (req, res) => res.json(library.history(String(req.params.id))));
+  app.get('/api/recovery/:id', admin, (req, res) => {
+    const draft = library.getSetting<Draft[]>('recoveredCloudDrafts', []).find(d => d.id === req.params.id);
+    if (!draft) { res.sendStatus(404); return; } res.json(draft);
+  });
+  app.post('/api/recovery', admin, (req, res) => {
+    const { id, workspace } = z.object({ id: z.string().uuid(), workspace: z.string() }).parse(req.body);
+    if (workspace !== workspaceKey()) { res.status(409).json({ error: 'Library changed. Reopen Settings.' }); return; }
+    const drafts = library.getSetting<Draft[]>('recoveredCloudDrafts', []), draft = drafts.find(d => d.id === id);
+    if (!draft) { res.sendStatus(404); return; }
+    const saved = cloud ? cloud.save(draft, []) : library.save(draft, []);
+    library.setSetting('recoveredCloudDrafts', drafts.filter(d => d.id !== id)); broadcast('library'); res.json(saved);
+  });
   app.post('/api/load', admin, (req, res) => {
     const { id } = z.object({ id: z.string().uuid() }).parse(req.body);
     const script = library.get(id);
@@ -79,13 +116,33 @@ export async function createHost(options: { dataDir: string; port?: number; stat
   });
   app.post('/api/preferences', admin, (req, res) => {
     const next = preferencesSchema.parse(req.body);
+    if (next.cloudFolder !== preferences.cloudFolder) { res.status(409).json({ error: 'Use Switch library and choose whether to copy your current scripts.' }); return; }
     if (next.cloudFolder && resolve(next.cloudFolder) === library.dir) throw new Error('Cloud folder and database folder must be different.');
     if (next.speed !== preferences.speed) session.command({ type: 'speed', speed: next.speed });
     if (next.loop !== preferences.loop) session.command({ type: 'loop', loop: next.loop });
-    preferences = next; library.setSetting('preferences', preferences);
+    preferences = next; localLibrary.setSetting('preferences', preferences);
     broadcast('state'); res.json(preferences);
   });
   app.post('/api/sync', admin, (_req, res) => res.json(sync()));
+  app.post('/api/workspace', admin, (req, res) => {
+    const { folder, copyCurrent } = z.object({ folder: z.string().max(2000), copyCurrent: z.boolean() }).parse(req.body);
+    const source = library.list().filter(s => !s.deleted);
+    const next = folder ? openCloud(folder, true) : null;
+    if (next) {
+      next.sync();
+      if (copyCurrent) for (const s of source) {
+        const existing = next.library.list().filter(s => !s.deleted);
+        if (!existing.some(e => e.id === s.id || (e.title === s.title && e.content === s.content))) next.save(s, next.library.get(s.id)?.heads ?? []);
+      }
+    }
+    cloud = next; library = next?.library ?? localLibrary;
+    upgradeRequired = false;
+    if (next && !approvedClouds.includes(next.folder)) { approvedClouds.push(next.folder); localLibrary.setSetting('approvedCloudLibraries', approvedClouds); }
+    preferences = { ...preferences, cloudFolder: next?.folder ?? '' }; localLibrary.setSetting('preferences', preferences);
+    session.command({ type: 'reset' }); session.state.script = null;
+    syncStatus = { errors: [], imported: 0, exported: 0, at: new Date().toISOString() };
+    broadcast('state'); broadcast('library'); res.json(preferences);
+  });
   app.post('/api/import/docx', admin, express.raw({ type: 'application/octet-stream', limit: '10mb' }), async (req, res) => {
     if (!Buffer.isBuffer(req.body)) { res.status(400).json({ error: 'DOCX file missing.' }); return; }
     const result = await mammoth.extractRawText({ buffer: req.body }); res.json({ text: result.value });
@@ -141,7 +198,8 @@ export async function createHost(options: { dataDir: string; port?: number; stat
   catch (error) { library.close(); throw error; }
   const port = (local.address() as { port: number }).port; const origin = `http://127.0.0.1:${port}`;
   const url = (role: Role, base = origin, profile = 'display') => `${base}/${role === 'admin' ? '' : role === 'output' ? `output?profile=${profile}` : 'remote'}#${tokens[role]}`;
-  const info = () => ({ origin, outputUrl: url('output'), vrUrl: url('output', origin, 'vr'), remoteUrl: url('remote'), dataDir: library.dir, sync: syncStatus,
+  const info = () => ({ origin, outputUrl: url('output'), vrUrl: url('output', origin, 'vr'), remoteUrl: url('remote'), dataDir: library.dir, sync: syncStatus, workspace: workspaceKey(), upgradeRequired, cloudFolder: preferences.cloudFolder, legacyBackup: library.getSetting<string>('legacyBackup', ''),
+    recoveredDrafts: library.getSetting<Draft[]>('recoveredCloudDrafts', []).map(d => ({ id: d.id, title: d.title })),
     connections: [...sockets.values()].filter(r => r !== 'admin').length, lanEnabled: !!lan,
     lanUrls: lan ? Object.values(networkInterfaces()).flatMap(list => (list ?? []).filter(n => n.family === 'IPv4' && !n.internal).map(n => ({ output: url('output', `http://${n.address}:${lanPort}`), remote: url('remote', `http://${n.address}:${lanPort}`) }))) : [],
   });
@@ -167,8 +225,8 @@ export async function createHost(options: { dataDir: string; port?: number; stat
   });
   const ticker = setInterval(() => { if (session.state.playing) { session.tick(); broadcast('tick'); } }, 100);
   const syncTimer = setInterval(sync, 5000);
-  return { origin, tokens, url, library, session, info,
-    async close() { clearInterval(ticker); clearInterval(syncTimer); for (const ws of sockets.keys()) ws.terminate(); await Promise.all(servers.map(s => new Promise<void>(r => { s.closeAllConnections(); s.close(() => r()); }))); library.close(); },
+  return { origin, tokens, url, get library() { return library; }, session, info,
+    async close() { clearInterval(ticker); clearInterval(syncTimer); for (const ws of sockets.keys()) ws.terminate(); await Promise.all(servers.map(s => new Promise<void>(r => { s.closeAllConnections(); s.close(() => r()); }))); for (const cache of opened.values()) cache.close(); localLibrary.close(); },
   };
 }
 export type Host = Awaited<ReturnType<typeof createHost>>;

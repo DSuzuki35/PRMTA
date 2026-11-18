@@ -55,3 +55,5 @@ dialog::backdrop{background:#080b0dcc;backdrop-filter:blur(8px)}
 .end-mark{color:var(--muted)}
 
 .prompter-text [data-word]{transition:color 140ms ease,opacity 140ms ease}
+
+.editor.editor-expanded{position:fixed;inset:8px;z-index:50;width:auto;max-width:none;height:calc(100dvh - 16px);max-height:none;box-sizing:border-box;border:1px solid var(--control-border);border-radius:16px;background:var(--panel)}.editor-expanded .script-textarea{min-height:160px;flex:1}.editor-heading .save-state{margin-left:auto;margin-right:12px}.folder-path{display:block;overflow-wrap:anywhere;white-space:normal}.storage-badge{border:1px solid var(--control-border);color:var(--muted)}

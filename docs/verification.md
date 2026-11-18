@@ -1,5 +1,14 @@
 # Release verification — PRMTA
 
+## 0.2.5 update verification
+
+- Production build, 68 unit/integration tests and 30 browser workflows passed. New tests cover current TXT publication, rename/delete/restore, external edits, name collisions, case-only Windows renames and unavailable folders.
+- Migration tests verify local backups before removal, interrupted cleanup, preserving files changed since backup, conflict preflight and no repeated backup growth on retries. A private migration rehearsal against a copied existing revision folder produced one current script with unchanged text; the original folder was not modified by the rehearsal.
+- A local write-ahead journal recovers interrupted renames without losing identity or notes. A conflicting interrupted draft becomes an exportable/restorable copy, while external edits and ordinary synchronization continue.
+- Browser workflows verify separate libraries, explicit copy/open choices, confirmation before legacy upgrade, stale-workspace rejection, external changes discovered during a failed save, and exporting/restoring a recovered draft without replacing the external version.
+- Expanded-editor tests verify window-sized geometry, no operating-system fullscreen, preserved text, inert background and Escape/focus restoration. Native English screenshots were inspected.
+- Claude Code reviewed the change and two follow-ups. Its final focused review confirms the remaining recovery and repeated-backup issues were resolved without new blockers in those fixes. Corrupt shared metadata intentionally fails closed; it is not silently rebuilt at the expense of IDs or notes.
+
 ## 0.2.4 update verification
 
 - Windows CI passed for release source `d0ae10f`. The final portable executable passed extraction, sample loading, one-button bundled voice setup, the real Base audio fixture and clean shutdown. SHA-256: `eb3caebad53db9a6673b3d7a31bf40d5e549a778fbb222560e8507e4faa3ef73`.

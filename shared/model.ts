@@ -13,7 +13,7 @@ export const revisionSchema = draftSchema.extend({
 });
 export type Draft = z.infer<typeof draftSchema>;
 export type Revision = z.infer<typeof revisionSchema>;
-export type Script = Revision & { heads: string[]; conflict: boolean };
+export type Script = Revision & { heads: string[]; conflict: boolean; workspace?: string; storage?: 'local' | 'cloud' };
 
 export const appearanceSchema = z.object({
   fontSize: z.number().min(24).max(160), lineHeight: z.number().min(1.1).max(2.5),

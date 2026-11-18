@@ -6,7 +6,8 @@
 | --- | --- |
 | `electron/` | Secure desktop shell, native displays, owned Whisper process, verified model downloads. |
 | `server/host.ts` | Loopback HTTP API, optional LAN listener, authentication and websocket distribution. |
-| `server/library.ts` | SQLite revision index, TXT publication, cloud-folder reconciliation and conflicts. |
+| `server/library.ts` | Local SQLite revision index, immutable TXT history and legacy revision validation. |
+| `server/cloud-library.ts` | Current cloud TXT files, metadata, bidirectional reconciliation and backed-up legacy migration. |
 | `server/session.ts` | Authoritative take state, clock, countdown, playback and voice alignment. |
 | `shared/` | Validated models, Unicode tokenization, explicit pages, fuzzy matching and model catalog. |
 | `src/` | React studio, editor, output, remote and microphone capture. |
@@ -35,13 +36,17 @@ Voice highlighting has a separate server-side `VoicePacing` estimate in `shared/
 
 Each script has a UUID; each immutable revision has its own UUID, parent revision IDs, timestamp, title, content, tags, folder, favorite/trash flags and notes. Heads are revisions not named as parents. Multiple heads represent a conflict. Save checks expected heads to reject stale edits. Restore creates a new revision with all current heads as parents.
 
-TXT is published before its JSON metadata sidecar, using a temporary file and rename. Sync retries incomplete cloud deliveries and validates IDs, content limits, parent relationships and collisions. Cyclic or cross-script chains are rejected. Missing parents may arrive later. The `.prmpt.json` extension and internal `prmpt` websocket/storage identifiers remain stable so 0.1 data can be used by PRMTA. Public branding is PRMTA.
+Local history retains immutable TXT and JSON revision pairs. Each cloud folder has its own local SQLite cache under `workspaces/<folder hash>`; tokens and preferences remain in the original local library. The cloud folder itself has one current TXT per active script plus `.prmta/library.json` for current metadata. Cloud saves reconcile first, reject stale revision heads, and persist a local write-ahead recovery record before publishing current text and metadata. Interrupted renames resume with the same identity and metadata. If recovery conflicts with a newer external edit, the pending draft moves to a local recoverable-drafts queue and the write journal is cleared so reconciliation can continue; admin-only endpoints export or restore a separate copy. External TXT edits create local history; external deletion moves the cached script to local trash. Missing folder/read errors abort reconciliation instead of treating the entire library as deleted.
+
+`POST /api/workspace` requires an explicit `copyCurrent` choice. Ordinary preference writes cannot switch cloud folders. Scripts returned to the studio carry a workspace identity; stale editor saves to another workspace return 409. Switching resets the loaded take and keeps the original library available. Cached drafts include the cloud workspace identity.
+
+Previously configured cloud folders require explicit approval before conversion. Legacy revision pairs are validated, imported into local history, copied to a verified local backup, and replaced by current TXT files. A locally persisted cleanup plan resumes removal of exact validated legacy files after interruption. Current text that differs from a partly migrated legacy head stops migration rather than being overwritten. Internal `prmpt` websocket/storage identifiers remain compatible; converted cloud folders require PRMTA 0.2.5 or newer.
 
 New desktop profiles use `%APPDATA%\PRMTA`. When no new profile exists, the app reuses an existing `%APPDATA%\PRMPT` profile. It does not move or delete it. `PRMTA_DATA_DIR` changes the library location; the legacy `PRMPT_DATA_DIR` is also accepted. `PRMTA_PROFILE_DIR` isolates the full Electron profile for smoke tests. The standalone server defaults to `.prmpt` in the checkout for compatibility and accepts `PRMTA_DATA_DIR`.
 
 Library lists cache parsed heads and invalidate on local inserts or SQLite's `data_version` changes. Loading one script uses an indexed query. Voice matching caches tokenization and searches a nearby window. Prompter rendering uses a viewport-sized word window and stops its animation loop when settled. Page fitting searches for a stable maximum size. Transport revisions invalidate speech captured before navigation, including remote commands. Prompter formatting is precomputed per script; memoized word components avoid rebuilding unchanged word DOM on each tick. Revision graph validation uses an explicit stack to support deep histories.
 
-Cloud scanning remains synchronous and reads revision files every five seconds to retain collision detection. Very large histories can stall the host during reconciliation. No claim of unlimited library size is made; asynchronous/incremental sync is a future improvement.
+Cloud scanning remains synchronous, checking current TXT files every five seconds and reusing content when file size and timestamps are unchanged. Invalid individual TXT files are reported without deleting their cached script or blocking valid scripts; malformed shared metadata fails closed. Very large folders can stall the host during reconciliation. No claim of unlimited library size is made; asynchronous/incremental sync is a future improvement.
 
 ## Security boundaries
 

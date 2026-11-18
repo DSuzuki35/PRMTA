@@ -13,21 +13,21 @@
 - **VR:** transparent OpenKneeboard Web Dashboard output with an independent appearance profile.
 - **Local voice follow:** bundled multilingual Whisper Base, forgiving nearby script alignment, waveform-gated predictive word highlighting, and selectable Tiny, Small, quantized Small and quantized Large v3 Turbo models.
 - **Your pace:** timed WPM scrolling, voice following or manual navigation; continuous reading-line and page-by-page layouts, optional smooth line transitions and wheel navigation.
-- **Script library:** UTF-8 TXT revisions, SQLite indexing, folders, tags, favorites, search, autosave, draft recovery, version history and reversible trash.
-- **Cloud folder sync:** use a local Dropbox, OneDrive or iCloud Drive folder; preserve revisions and surface conflicting edits.
+- **Script library:** UTF-8 TXT revisions, SQLite indexing, folders, tags, favorites, search, autosave, draft recovery, local version history, reversible local trash and an editor that expands inside the app window.
+- **Cloud libraries:** one current, readable TXT per script in a Dropbox, OneDrive or iCloud Drive folder. Edits and deletions work both ways; choose whether to copy current scripts when switching libraries.
 - **Control options:** keyboard shortcuts, mapped gamepad/joystick buttons, keyboard foot pedals and an optional phone remote over your private LAN.
 - **English interface:** designed with the [Dan Suzuki UI Kit](https://dansuzuki.com/ui-kit/), with locally bundled fonts. Script content can remain in its original language.
 
 ## Get started
 
-1. Download `PRMTA-0.2.4-Windows-x64.exe` from [Releases](https://github.com/DSuzuki35/PRMTA/releases/latest).
+1. Download `PRMTA-0.2.5-Windows-x64.exe` from [Releases](https://github.com/DSuzuki35/PRMTA/releases/latest).
 2. Run it and choose **Try a sample** or **Create script**.
 3. Press **Play**. For voice following, click **Enable voice** above the preview, then Play.
 4. In **Outputs**, choose an external monitor, copy a browser link or add the VR link to OpenKneeboard.
 
 The portable Windows x64 build includes the local CPU speech engine and Base model. It extracts at launch; allow a moment for the first start. No account or API key is required. The executable is not code-signed. The application stores persistent scripts and preferences in the Windows application profile, not next to the portable executable.
 
-PRMTA 0.2.0 preserves the existing PRMPT 0.1 profile when available. The old `.prmpt.json` sidecar extension is intentionally retained for cloud compatibility.
+PRMTA 0.2.0 preserves the existing PRMPT 0.1 profile when available. Version 0.2.5 converts old cloud revision folders to current TXT files after verifying a local backup. Use 0.2.5 or newer with converted cloud folders.
 
 ## Write naturally
 

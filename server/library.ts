@@ -98,6 +98,17 @@ export class Library {
   history(id: string): Revision[] {
     return this.db.prepare('SELECT data FROM revisions WHERE script=?').all(id).map(r => JSON.parse(r.data as string) as Revision).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
+  importRevisions(revisions: Revision[]) {
+    const known = new Map(this.all().map(r => [r.revision, r]));
+    const graph = new Map(known);
+    for (const input of revisions) {
+      const r = revisionSchema.parse(input), old = known.get(r.revision);
+      if (old && JSON.stringify(old) !== JSON.stringify(r)) throw new Error('Revision collision');
+      graph.set(r.revision, r);
+    }
+    for (const id of new Set(revisions.map(r => r.id))) if (!validChain(graph, id, [...graph.values()].filter(r => r.id === id))) throw new Error('Invalid revision chain');
+    for (const r of revisions) if (!known.has(r.revision)) this.insert(revisionSchema.parse(r));
+  }
   getSetting<T>(key: string, fallback: T): T {
     const row = this.db.prepare('SELECT value FROM settings WHERE key=?').get(key);
     return row ? JSON.parse(row.value as string) : fallback;

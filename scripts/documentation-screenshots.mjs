@@ -25,6 +25,9 @@ try {
   await page.getByRole('button', { name: 'Library', exact: true }).click();
   await page.getByRole('button', { name: /Your words. Your pace./ }).first().click();
   await page.screenshot({ path: 'docs/images/library.png' });
+  await page.getByRole('button', { name: 'Expand editor', exact: true }).click();
+  await page.screenshot({ path: 'docs/images/editor-expanded.png' });
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Outputs', exact: true }).click();
   await page.locator('.url-input').first().waitFor();
   await page.screenshot({ path: 'docs/images/outputs.png', mask: [page.locator('.url-input')], maskColor: '#25262c' });
@@ -33,5 +36,8 @@ try {
   await page.screenshot({ path: 'docs/images/settings.png', mask: [page.locator('.storage-note code')], maskColor: '#25262c' });
   await page.getByLabel('Local model').scrollIntoViewIfNeeded();
   await page.screenshot({ path: 'docs/images/models.png', mask: [page.locator('.storage-note code')], maskColor: '#25262c' });
-  console.log('Created seven English screenshots with private links and paths masked.');
+  await page.getByLabel('Cloud library folder', { exact: true }).fill(join(dir, 'cloud'));
+  await page.getByRole('button', { name: 'Open cloud library', exact: true }).click();
+  await page.getByRole('dialog').screenshot({ path: 'docs/images/cloud-switch.png', mask: [page.locator('.folder-path')], maskColor: '#25262c' });
+  console.log('Created English screenshots including expanded editor and cloud switch confirmation.');
 } finally { await app.close(); rmSync(dir, { recursive: true, force: true }); }

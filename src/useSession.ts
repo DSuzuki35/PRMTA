@@ -5,6 +5,8 @@ const initial: SessionState = { script: null, position: 0, playing: false, mode:
 export function useSession(onLibrary?: () => void) {
   const [session, setSession] = useState(initial); const [preferences, setPreferences] = useState(defaultPreferences);
   const [connected, setConnected] = useState(false);
+  const [workspace, setWorkspace] = useState('local');
+  const [upgradeRequired, setUpgradeRequired] = useState(false);
   useEffect(() => {
     let dead = false; let ws: WebSocket; let retry: ReturnType<typeof setTimeout>;
     const connect = () => {
@@ -14,6 +16,8 @@ export function useSession(onLibrary?: () => void) {
         const data: StateMessage = JSON.parse(event.data);
         if (data.session) setSession(previous => ({ ...previous, ...data.session, script: data.session!.script === undefined ? previous.script : data.session!.script }));
         if (data.preferences) setPreferences(data.preferences);
+        if (data.workspace) setWorkspace(data.workspace);
+        if (data.upgradeRequired !== undefined) setUpgradeRequired(data.upgradeRequired);
         if (data.type === 'library') onLibrary?.();
       };
       ws.onclose = () => { setConnected(false); if (!dead) retry = setTimeout(connect, 1500); };
@@ -22,5 +26,5 @@ export function useSession(onLibrary?: () => void) {
     if (token) connect();
     return () => { dead = true; clearTimeout(retry); ws?.close(); };
   }, [onLibrary]);
-  return { session, preferences, connected };
+  return { session, preferences, connected, workspace, upgradeRequired };
 }

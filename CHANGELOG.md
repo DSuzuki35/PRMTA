@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.5 - Cloud libraries and expanded editor
+
+- Separate local and cloud libraries, with an explicit copy-current-scripts or open-folder-only choice.
+- One current readable TXT per cloud script; edits, renames and deletions are reflected in the folder and external changes are imported.
+- Local history/trash and verified local backups when converting old revision folders.
+- Workspace labels on script cards and safeguards against stale editor saves after switching libraries.
+- Expand the script editor inside the app window; Escape restores the layout and preserves the draft.
+
+
 ## 0.2.4 - Voice-aware highlight pacing
 
 - Added optional smooth voice highlighting per output profile, enabled by default for local Whisper.
