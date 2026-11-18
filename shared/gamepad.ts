@@ -1,3 +1,4 @@
+import { gamepadActions, type GamepadActionKey, type Preferences } from './model';
 type Pad = { index: number; id: string; buttons: readonly { pressed: boolean }[] };
 export type CapturedButton = { button: number; controller: string };
 /** A binding is accepted only after this capture observes 0 -> 1 -> 0. */
@@ -20,5 +21,30 @@ export class ButtonCapture {
     }
     this.previous = current;
     return result;
+  }
+}
+
+/** Freshly connected, resumed, or already-held controls must release before use. */
+export class GamepadInput {
+  private previous = new Map<string, boolean>();
+  private held = new Set<string>();
+  sample(pads: readonly (Pad | null)[], preferences: Preferences): { actions: GamepadActionKey[]; scroll: -1 | 0 | 1 } {
+    const current = new Map<string, boolean>(), held = new Set<string>();
+    const actions = new Set<GamepadActionKey>(); let up = false, down = false;
+    for (const pad of pads) if (pad) for (const action of gamepadActions) {
+      const button = preferences[action.key]; if (button === null) continue;
+      const key = `${pad.index}:${pad.id}:${button}`, pressed = pad.buttons[button]?.pressed ?? false;
+      current.set(key, pressed);
+      const edge = pressed && this.previous.get(key) === false;
+      if (pressed && (edge || this.held.has(key))) {
+        held.add(key);
+        if (action.unit === 'scroll') { if (action.direction < 0) up = true; else down = true; }
+        else if (edge) actions.add(action.key);
+      }
+    }
+    this.previous = current; this.held = held;
+    const navigation = gamepadActions.filter(action => actions.has(action.key));
+    const opposing = navigation.some(action => action.direction < 0) && navigation.some(action => action.direction > 0);
+    return { actions: opposing ? [] : navigation.slice(0, 1).map(action => action.key), scroll: navigation.length || up === down ? 0 : up ? -1 : 1 };
   }
 }

@@ -4,7 +4,7 @@
 
 | Location | Responsibility |
 | --- | --- |
-| `electron/` | Secure desktop shell, native displays, owned Whisper process, verified model downloads. |
+| `electron/` | Secure desktop shell, native displays, owned Whisper process, verified model downloads and application updates. |
 | `server/host.ts` | Loopback HTTP API, optional LAN listener, authentication and websocket distribution. |
 | `server/library.ts` | Local SQLite revision index, immutable TXT history and legacy revision validation. |
 | `server/cloud-library.ts` | Current cloud TXT files, metadata, bidirectional reconciliation and backed-up legacy migration. |
@@ -50,7 +50,7 @@ Cloud scanning remains synchronous, checking current TXT files every five second
 
 ## Security boundaries
 
-Electron enables sandboxing, context isolation and disables Node integration in renderers. Only the studio window can use the narrowly scoped preload bridge. Output windows have no preload bridge. External navigation is blocked; opening a browser is limited to local output/remote routes.
+Electron enables sandboxing, context isolation and disables Node integration in renderers. Only the studio window can use the narrowly scoped preload bridge. Output windows have no preload bridge. External navigation is blocked; browser opening accepts local output/remote routes and a separate fixed official release-page action.
 
 The host binds to loopback by default. LAN sharing requires a deliberate action and starts a separate listener. Persistent random tokens distinguish admin, read-only output and playback remote. Admin is restricted to loopback even on the LAN listener. Tokens are supplied as URL fragments and then HTTP authorization headers/websocket subprotocols. Output and remote preferences exclude private library paths.
 
@@ -74,10 +74,18 @@ npm run dev
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/setup-whisper.ps1
 npm run package
-npx electron-builder --win portable
+npx electron-builder --win nsis portable --x64 --publish never
 ```
 
-The first packaging command produces `release/win-unpacked`; the second builds the portable executable. The download requires network access. Release output, models, dependencies, credentials and test profiles must not be committed.
+The first packaging command produces `release/win-unpacked`; the second builds the Windows x64 NSIS installer and portable executable, plus update metadata. The download requires network access. Release output, models, dependencies, credentials and test profiles must not be committed.
+
+## Windows application updates
+
+The NSIS installation uses `electron-updater` and the public `DSuzuki35/PRMTA` GitHub release feed, following the [electron-builder update workflow](https://www.electron.build/v26/docs/features/auto-update/). Publish the Setup executable, its `.blockmap`, and `latest.yml` together with the matching release tag. The portable executable is an additional manual download; it is not the installer referenced by `latest.yml`. Before publishing, compare the update manifest's size and SHA-512 with the final installer bytes and verify the uploaded assets.
+
+The main process owns discovery, background download and installation. The renderer receives status/progress and exposes fixed check/install actions through the trusted desktop bridge. It cannot provide an arbitrary update URL. New checks defer during an active take and retry after five minutes; an already-started transfer is not interrupted. Installation is user initiated, with pending editor work checked before restart. Transport commands are rejected during handoff so a remote cannot restart playback between the readiness check and shutdown. The ordinary library and model shutdown path must complete before installer handoff. Development and portable builds explain their manual update path instead of attempting to update themselves.
+
+Keep `appId` (`studio.prmpt.app`), the product name (`PRMTA`) and profile compatibility stable across releases. The distribution is currently unsigned. Download integrity uses the updater's release metadata; this is not a claim of independent publisher signature verification.
 
 Additional checks:
 

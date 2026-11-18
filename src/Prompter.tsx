@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Appearance, SessionState } from '../shared/model';
 import { tokenize } from '../shared/text';
-import { pagesFor } from '../shared/pages';
+import { navigationStarts, pagesFor } from '../shared/pages';
 import { WordLayer } from './WordLayer';
 
 export function Prompter({ session, appearance, onSeek, fullscreen = false }: { session: SessionState; appearance: Appearance; onSeek?: (index: number) => void; fullscreen?: boolean }) {
@@ -13,15 +13,32 @@ export function Prompter({ session, appearance, onSeek, fullscreen = false }: { 
   const index = Math.max(0, Math.min(Math.floor(session.position), words.length - 1));
   const pages = useMemo(() => pagesFor(content), [content]);
   const pageIndex = Math.max(0, pages.findIndex(p => index >= p.start && index < p.end));
-  const page = pages[pageIndex], paged = appearance.flow === 'page';
+  const page = pages[pageIndex], paged = appearance.flow === 'page' && !session.manualScroll;
   // Keep the compositor and React work bounded even for book-length scripts.
-  const start = paged ? page?.start ?? 0 : Math.max(0, Math.floor(index / 128) * 128 - capacity / 2);
-  const end = paged ? page?.end ?? words.length : Math.min(words.length, start + capacity);
+  const desiredStart = Math.max(0, Math.floor(index / 128) * 128 - capacity / 2);
+  const paragraphs = useMemo(() => navigationStarts(content, 'paragraph'), [content]);
+  const windowStarts = useMemo(() => new Map<number, number>(), [content, appearance, capacity]);
+  const start = useMemo(() => {
+    if (paged) return page?.start ?? 0;
+    const cached = windowStarts.get(desiredStart); if (cached !== undefined) return cached;
+    let aligned = desiredStart;
+    const paragraph = paragraphs.findLast(position => position <= desiredStart) ?? 0;
+    if (desiredStart - paragraph <= 256) aligned = paragraph;
+    else {
+      // Preserve wrapping when removing text before the viewport. Remember this
+      // line boundary so scrolling back through the same window stays stable.
+      const word = text.current?.querySelector<HTMLElement>(`[data-word="${desiredStart}"]`);
+      if (word) while (aligned > 0) { const previous = text.current?.querySelector<HTMLElement>(`[data-word="${aligned - 1}"]`); if (!previous || previous.offsetTop !== word.offsetTop) break; aligned--; }
+    }
+    windowStarts.set(desiredStart, aligned); return aligned;
+  }, [paged, page?.start, desiredStart, paragraphs, windowStarts]);
+  const end = paged ? page?.end ?? words.length : Math.min(words.length, desiredStart + capacity);
   const highlightIndex = appearance.smoothVoice && session.mode === 'voice' && session.playing
     ? Math.max(index, Math.min(end - 1, session.voiceHighlight ?? index)) : index;
   const previous = useRef({ id: session.script?.id, start, index, paged, target: 0 });
-  const smooth = useRef(appearance.smoothScroll); smooth.current = appearance.smoothScroll;
+  const smooth = useRef(appearance.smoothScroll); smooth.current = appearance.smoothScroll || !!session.manualScroll;
   const animation = useRef<number | undefined>(undefined);
+  const wasScrolling = useRef(false);
   const reduced = useRef(false);
   const writePosition = () => { if (text.current) text.current.style.transform = `translateY(${y.current}px)`; };
   const wakeAnimation = () => {
@@ -61,15 +78,33 @@ export function Prompter({ session, appearance, onSeek, fullscreen = false }: { 
     } else {
       el.style.fontSize = `${appearance.fontSize}px`;
       target.current = wordTarget(index);
+      if (session.manualScroll) {
+        // Interpolate between line starts using fractional word progress. This
+        // moves the actual text continuously instead of jumping at each wrap.
+        const current = el.querySelector<HTMLElement>(`[data-word="${index}"]`);
+        if (current) {
+          let first = index, next = index + 1;
+          while (first > start) { const word = el.querySelector<HTMLElement>(`[data-word="${first - 1}"]`); if (!word || word.offsetTop !== current.offsetTop) break; first--; }
+          while (next < end) { const word = el.querySelector<HTMLElement>(`[data-word="${next}"]`); if (!word || word.offsetTop !== current.offsetTop) break; next++; }
+          if (next < end) target.current += (wordTarget(next) - target.current) * Math.min(1, (session.position - first) / (next - first));
+        }
+      }
       // Rebase the render window without animating across removed offscreen text.
       if (old.start !== start && old.id === session.script?.id && !old.paged) y.current += wordTarget(old.index) - old.target;
     }
-    if (paged || !session.playing || !appearance.smoothScroll || old.id !== session.script?.id || old.paged !== paged || Math.abs(index - old.index) > 32) y.current = target.current;
-    previous.current = { id: session.script?.id, start, index, paged, target: target.current };
+    if (paged || (!session.playing && !session.manualScroll) || !smooth.current || old.id !== session.script?.id || old.paged !== paged || Math.abs(index - old.index) > 32) y.current = target.current;
+    previous.current = { id: session.script?.id, start, index, paged, target: paged ? target.current : wordTarget(index) };
+    if (wasScrolling.current && session.manualScroll && !session.manualScrollActive) {
+      // Freeze exactly where the text is when release arrives; do not snap to
+      // the last network position or leave a spring animation running.
+      if (animation.current !== undefined) cancelAnimationFrame(animation.current);
+      animation.current = undefined; target.current = y.current;
+    }
+    wasScrolling.current = !!session.manualScrollActive;
     writePosition(); wakeAnimation();
   };
   const measureRef = useRef(measure); measureRef.current = measure;
-  useLayoutEffect(() => { measure(); }, [paged ? pageIndex : index, appearance, content, session.script?.id, session.playing, capacity]);
+  useLayoutEffect(() => { measure(); }, [paged ? pageIndex : session.manualScroll ? session.position : index, paged, appearance, content, session.script?.id, session.playing, session.manualScroll, session.manualScrollActive, capacity]);
   useEffect(() => {
     const observer = new ResizeObserver(() => measureRef.current()); if (viewport.current) observer.observe(viewport.current);
     let active = true; void document.fonts.ready.then(() => { if (active) measureRef.current(); });
@@ -116,6 +151,7 @@ export function Prompter({ session, appearance, onSeek, fullscreen = false }: { 
       </div>
     </div>
     {paged && page && <div className="page-number">{pageIndex + 1} / {pages.length}</div>}
+    {appearance.flow === 'page' && session.manualScroll && <div className="page-number" title="Page layout resumes with navigation or playback">Manual scroll · navigate or play to resume pages</div>}
     {session.countdownUntil > Date.now() && session.playing && <div className="countdown">{Math.ceil((session.countdownUntil - Date.now()) / 1000)}</div>}
     {session.blackout && <div className="blackout-cover"/>}
   </div>;

@@ -5,6 +5,7 @@ import { tokenize, formatTime } from '../shared/text';
 import { api } from './api';
 import { Modal } from './Modal';
 import { recoverDraft } from './drafts';
+import { registerUpdateSave } from './updateSafety';
 
 export function Editor({ script, onSaved, onLoad, onCopy, report }: { script: Script; onSaved: (s: Script) => void; onLoad: (id: string) => Promise<void>; onCopy: (s: Script) => Promise<void>; report: (s: string) => void }) {
   const [expanded, setExpanded] = useState(false);
@@ -65,8 +66,13 @@ export function Editor({ script, onSaved, onLoad, onCopy, report }: { script: Sc
   };
   useEffect(() => { if (!dirty.current) return; const timer = setTimeout(() => { void persist().catch(() => {}); }, 900); return () => clearTimeout(timer); }, [version]);
   useEffect(() => {
+    let mounted = true;
+    const unregister = registerUpdateSave(async () => {
+      try { await persist(); while (dirty.current) await persist(); if (!mounted) unregister(); }
+      catch (error) { throw new Error(`Open “${current.current.title}” in its library, resolve any conflict, and save it before restarting. ${String(error)}`); }
+    }, cacheKey);
     const prevent = (event: BeforeUnloadEvent) => { if (dirty.current && (!window.desktop || backupFailed.current)) { event.preventDefault(); event.returnValue = ''; } };
-    window.addEventListener('beforeunload', prevent); return () => { window.removeEventListener('beforeunload', prevent); void persist().catch(() => {}); };
+    window.addEventListener('beforeunload', prevent); return () => { mounted = false; window.removeEventListener('beforeunload', prevent); void persist().then(unregister).catch(() => {}); };
   }, []);
   const wrap = (marker: string) => { const el = textarea.current; if (!el) return; const a = el.selectionStart, b = el.selectionEnd; update({ content: draft.content.slice(0, a) + marker + draft.content.slice(a, b) + marker + draft.content.slice(b) }); requestAnimationFrame(() => { el.focus(); el.setSelectionRange(a + marker.length, b + marker.length); }); };
   const download = () => { const blob = new Blob([draft.content], { type: 'text/plain;charset=utf-8' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${draft.title.replace(/[<>:"/\\|?*]/g, '_')}.txt`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };

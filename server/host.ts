@@ -17,7 +17,7 @@ import { whisperEndpoint } from '../shared/whisper-endpoint';
 type Role = 'admin' | 'output' | 'remote';
 type AuthRequest = Request & { role?: Role };
 const isLocal = (address?: string) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address ?? '');
-export async function createHost(options: { dataDir: string; port?: number; staticDir?: string; ensureSpeech?: (url: string, model: string) => Promise<void>; models?: { list: () => ModelsInfo; install: (id: string) => void } }) {
+export async function createHost(options: { dataDir: string; port?: number; staticDir?: string; canControl?: () => boolean; ensureSpeech?: (url: string, model: string) => Promise<void>; models?: { list: () => ModelsInfo; install: (id: string) => void } }) {
   const localLibrary = new Library(options.dataDir); let library = localLibrary;
   let cloud: CloudLibrary | null = null;
   const opened = new Map<string, Library>(); const session = new Session();
@@ -107,12 +107,13 @@ export async function createHost(options: { dataDir: string; port?: number; stat
     session.load(script); broadcast('state'); res.json({ ok: true });
   });
   app.post('/api/command', control, (req: AuthRequest, res) => {
+    if (options.canControl && !options.canControl()) { res.status(409).json({ error: 'Controls are unavailable while restarting to install an update.' }); return; }
     const command = commandSchema.parse(req.body);
     if (['transcript', 'voiceActivity'].includes(command.type) && req.role !== 'admin') { res.sendStatus(403); return; }
     session.command(command.type === 'play' && command.countdown === undefined ? { ...command, countdown: preferences.countdown } : command);
     // Audio heartbeats are small and frequent. The existing ticker publishes the
     // visual position; never echo a potentially book-length script on each beat.
-    if (command.type === 'voiceActivity') { res.json(null); return; }
+    if (command.type === 'voiceActivity' || command.type === 'scroll') { if (command.type === 'scroll') broadcast('tick'); res.json(null); return; }
     broadcast('tick'); res.json(session.snapshot());
   });
   app.post('/api/preferences', admin, (req, res) => {
@@ -223,7 +224,7 @@ export async function createHost(options: { dataDir: string; port?: number; stat
   app.use((error: Error & { status?: number }, _req: Request, res: Response, _next: NextFunction) => {
     res.status(error instanceof ZodError ? 400 : error.status ?? 500).json({ error: error instanceof ZodError ? 'Invalid input. Check values and file format.' : error.message });
   });
-  const ticker = setInterval(() => { if (session.state.playing) { session.tick(); broadcast('tick'); } }, 100);
+  const ticker = setInterval(() => { if (session.state.playing || session.scrolling) { session.tick(); broadcast('tick'); } }, 100);
   const syncTimer = setInterval(sync, 5000);
   return { origin, tokens, url, get library() { return library; }, session, info,
     async close() { clearInterval(ticker); clearInterval(syncTimer); for (const ws of sockets.keys()) ws.terminate(); await Promise.all(servers.map(s => new Promise<void>(r => { s.closeAllConnections(); s.close(() => r()); }))); for (const cache of opened.values()) cache.close(); localLibrary.close(); },

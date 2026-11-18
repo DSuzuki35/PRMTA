@@ -1,5 +1,15 @@
 # Release verification — PRMTA
 
+## 0.3.0 update verification
+
+- Final portable extraction, sample loading, bundled one-button Whisper setup and clean shutdown passed. The real packaged updater passed current-version discovery, a local higher-version download, SHA-512 validation, ready-state UI and refusal to install during an active take, using an isolated profile/cache and never executing the fixture installer. Setup SHA-256: `1c0f5917c947f56e9f5ad5b0c34e81d94a01e8e78f492afeffc4d51a7fa6eacf`; portable SHA-256: `daee05676ad95852c85373a0b55052a988f393e0ba5c4a3802217eb4138c7961`.
+- Production build, 96 unit/integration tests and 37 Chromium workflows passed. The controller tests cover assignment/clearing, duplicate rejection, simultaneous inputs, sentence/paragraph/page navigation, release, blur, dialogs, Settings, disconnect and expiring input heartbeats.
+- Motion checks cover studio/output synchronization, page-profile manual scrolling, forward and previously visited reverse rendering boundaries, and stopping the visible animation on release. Long-paragraph checks keep the current word rendered at boundary positions and in a 4K output.
+- Updater tests cover automatic and deferred checks, retry/error states, explicit installation, unload veto and blocked playback during handoff. Browser tests verify that an unmounted editor's pending save delays installation, failed saves block it, and reopening/saving the draft allows retry.
+- The actual Claude Code CLI reviewed the change and a focused follow-up. The follow-up reported no reproducible blockers. Native testing then caught a deferred ordinary-quit hang; completing normal shutdown with `app.exit` after service cleanup fixed it, while update handoff retains its separate `quitAndInstall` path. Native screenshot capture now closes successfully.
+- Automated accessibility checks passed at 800 and 1440 pixels. English screenshots were refreshed and inspected. Production dependency audit reported zero vulnerabilities at verification time.
+- Physical controllers remain untested. Reversing into an unseen virtual text window after a distant seek in a very long paragraph may reflow a line; ordinary forward and previously visited reverse boundaries are covered by motion tests. The updater download fixture does not execute an update installer or simulate a future production release.
+
 ## 0.2.5 update verification
 
 - Windows CI passed for final source `c83c06d`. The final portable executable passed extraction, sample loading, bundled one-button voice setup and clean shutdown. SHA-256: `b3c6d4063aba010d3c8398ae88ec6060dafd21ebdb33b9786fec8607e674100f`.
@@ -95,7 +105,7 @@ Review logs are intentionally not published because they contain local session/a
 - Base and Tiny were started locally. Small/Small Q5/Turbo Q5 catalog metadata is pinned, but runtime latency and recognition quality for those models were not benchmarked here.
 - The audio test used a known recording, not the user's live microphone, accent, room or headset. Voice matching is tolerant nearby alignment, not arbitrary semantic paraphrase understanding.
 - Very large revision folders still use synchronous scans. Draft backups remain origin-scoped when the studio port changes. After a forced crash, an orphaned Whisper process may need to be closed manually. These are documented limitations.
-- The portable executable is unsigned. No auto-update service is included.
+- Windows executables are unsigned. Automatic updates require the installed NSIS build introduced in 0.3.0; portable builds use manual downloads.
 
 ## Reproduce
 
@@ -104,6 +114,7 @@ See [architecture and development](ARCHITECTURE.md) for the main commands. Addit
 ```powershell
 node scripts/draft-close-smoke.mjs
 node scripts/model-smoke.mjs
+node scripts/updater-runtime-smoke.mjs release/0.3.0/win-unpacked/PRMTA.exe release/0.3.0/PRMTA-Setup-0.3.0-x64.exe
 $env:PRMTA_EXE = "$PWD\release\win-unpacked\PRMTA.exe"
 $env:PRMTA_CHECK_WHISPER = '1'
 node scripts/electron-smoke.mjs

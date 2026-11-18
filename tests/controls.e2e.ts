@@ -33,9 +33,9 @@ test('assignment ignores a held button and commits only after release', async ({
 });
 test('responsive speech sends short overlapping windows, one at a time, and stops work while paused', async ({ page }) => {
   host.session.load({ id: 'speech', title: 'Speech', content: 'One two three four five six seven eight nine ten.' });
-  await page.route('**/api/speech/status', route => route.fulfill({ json: { ok: true, message: 'Ready' } }));
+  await page.route(/\/api\/speech\/status(?:\?|$)/, route => route.fulfill({ json: { ok: true, message: 'Ready' } }));
   const requests: { at: number; bytes: number }[] = []; let active = 0, maxActive = 0;
-  await page.route('**/api/speech', async route => {
+  await page.route(/\/api\/speech(?:\?|$)/, async route => {
     requests.push({ at: Date.now(), bytes: route.request().postDataBuffer()!.length }); active++; maxActive = Math.max(maxActive, active);
     await new Promise(resolve => setTimeout(resolve, 200)); active--;
     await route.fulfill({ json: { text: 'One two three four' } });

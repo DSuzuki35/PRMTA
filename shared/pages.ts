@@ -1,8 +1,31 @@
-import { tokenize } from './text';
+import { tokenize, type Word } from './text';
 export type ScriptPage = { start: number; end: number };
 const targetWords = 60;
 const abbreviations = new Set(['mr', 'mrs', 'ms', 'dr', 'prof', 'sr', 'jr', 'st', 'vs', 'nr', 'bzw', 'ca']);
 const compoundAbbreviations = new Set(['z:b', 'e:g', 'i:e', 'u:a']);
+function sentenceEnds(content: string, words: Word[], i: number): boolean {
+  const gap = content.slice(words[i].end, words[i + 1]?.start ?? content.length).replace(/==|\*\*/g, '');
+  const adjacentNumber = !!words[i + 1] && /^\d+$/.test(words[i].raw) && /^\d+$/.test(words[i + 1].raw) && /^[.,:]$/.test(gap);
+  const compound = (i > 0 && compoundAbbreviations.has(`${words[i - 1].normalized}:${words[i].normalized}`) && /^\.\s*$/.test(content.slice(words[i - 1].end, words[i].start))) || (!!words[i + 1] && compoundAbbreviations.has(`${words[i].normalized}:${words[i + 1].normalized}`) && /^\.\s*$/.test(gap));
+  return /[!?…]/u.test(gap) || (/\./.test(gap) && !adjacentNumber && !abbreviations.has(words[i].normalized) && !compound && (!words[i + 1] || /\s/.test(gap)));
+}
+export function navigationStarts(content: string, unit: 'page' | 'paragraph' | 'sentence'): number[] {
+  if (unit === 'page') return pagesFor(content).map(page => page.start);
+  const words = tokenize(content), starts: number[] = words.length ? [0] : [];
+  for (let i = 1; i < words.length; i++) {
+    const gap = content.slice(words[i - 1].end, words[i].start);
+    const paragraph = words[i].paragraph !== words[i - 1].paragraph || /^\s*\\?---\s*$/m.test(gap);
+    if (paragraph || (unit === 'sentence' && sentenceEnds(content, words, i - 1))) starts.push(i);
+  }
+  return starts;
+}
+export function navigateTo(starts: number[], position: number, direction: -1 | 1): number {
+  if (!starts.length) return 0;
+  // Previous means the previous unit, even when reading midway through a unit.
+  let index = starts.length - 1;
+  while (index > 0 && starts[index] > position) index--;
+  return starts[Math.max(0, Math.min(starts.length - 1, index + direction))];
+}
 export function pagesFor(content: string): ScriptPage[] {
   const chunks = content.split(/^\s*\\?---\s*$/m); const pages: ScriptPage[] = []; let offset = 0;
   if (chunks.length > 1) {
@@ -15,8 +38,7 @@ export function pagesFor(content: string): ScriptPage[] {
     const gap = content.slice(words[i].end, words[i + 1]?.start ?? content.length).replace(/==|\*\*/g, '');
     const adjacentNumber = !!words[i + 1] && /^\d+$/.test(words[i].raw) && /^\d+$/.test(words[i + 1].raw) && /^[.,:]$/.test(gap);
     if (!adjacentNumber && /[,;:—–]/u.test(gap)) clauses.push(i + 1);
-    const compound = (i > 0 && compoundAbbreviations.has(`${words[i - 1].normalized}:${words[i].normalized}`) && /^\.\s*$/.test(content.slice(words[i - 1].end, words[i].start))) || (!!words[i + 1] && compoundAbbreviations.has(`${words[i].normalized}:${words[i + 1].normalized}`) && /^\.\s*$/.test(gap));
-    const sentenceEnd = /[!?…]/u.test(gap) || (/\./.test(gap) && !adjacentNumber && !abbreviations.has(words[i].normalized) && !compound && (!words[i + 1] || /\s/.test(gap)));
+    const sentenceEnd = sentenceEnds(content, words, i);
     if (!sentenceEnd && i < words.length - 1) continue;
     const end = i + 1;
     if (end - sentenceStart > targetWords) {

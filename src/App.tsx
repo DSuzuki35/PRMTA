@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDownToLine, ArrowUpRight, BookOpen, ChevronRight, CircleHelp, FileText, FolderOpen, Layers, Library as LibraryIcon, Maximize2, Mic, MicOff, Monitor, Pause, Play, Plus, Radio, RotateCcw, Search, Settings2, SkipBack, SkipForward, SlidersHorizontal, Sparkles, Square, Star, Trash2, X } from 'lucide-react';
-import { defaultPreferences, type Command, type Preferences, type Profile, type Script } from '../shared/model';
+import { defaultPreferences, gamepadActions, type Command, type Preferences, type Profile, type Script } from '../shared/model';
+import { GamepadInput } from '../shared/gamepad';
 import { tokenize, formatTime } from '../shared/text';
 import { pagesFor } from '../shared/pages';
 import { api, command, token } from './api';
@@ -33,7 +34,7 @@ export function App() {
   useEffect(() => { if (route === 'studio') { sessionStorage.setItem('prmpt-view', view); if (selected) sessionStorage.setItem('prmpt-selected', selected); } }, [view, selected, route]);
   useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(''), 9000); return () => clearTimeout(timer); }, [notice]);
   const captureEpoch = useRef(0);
-  const send = useCallback((c: Command) => { if (['seek', 'step', 'reset', 'pause', 'mode'].includes(c.type)) captureEpoch.current++; void command(c).catch(e => { if (c.type !== 'voiceActivity') report(String(e)); }); }, [report]);
+  const send = useCallback((c: Command) => { if (['seek', 'step', 'reset', 'pause', 'mode', 'navigate', 'scroll'].includes(c.type)) captureEpoch.current++; void command(c).catch(e => { if (c.type !== 'voiceActivity' && c.type !== 'scroll') report(String(e)); }); }, [report]);
   const updatePreferences = (value: Preferences) => {
     setPreferences(value); prefRef.current = value; prefPending.current = true; clearTimeout(prefTimer.current);
     prefTimer.current = setTimeout(() => { void api<Preferences>('/preferences', prefRef.current).then(() => { prefPending.current = false; }).catch(e => { prefPending.current = false; report(String(e)); }); }, 180);
@@ -66,19 +67,36 @@ export function App() {
     };
     window.addEventListener('keydown', keyboard); return () => window.removeEventListener('keydown', keyboard);
   }, [route, send, view]);
+  const controllerSource = useRef(crypto.randomUUID()), controllerSequence = useRef(0);
+  // Depend only on controller settings: unrelated appearance updates must not interrupt a hold.
+  const controllerBindings = JSON.stringify(gamepadActions.map(action => preferences[action.key]));
   useEffect(() => {
-    if (!preferences.gamepadEnabled || route === 'output' || view === 'settings') return;
-    const pressed = new Map<string, boolean>();
+    if (!preferences.gamepadEnabled || route === 'output' || view === 'settings' || !connected) return;
+    let input = new GamepadInput(), direction: -1 | 0 | 1 = 0, lastHeartbeat = 0, focused = document.hasFocus();
+    const scroll = (next: -1 | 0 | 1) => {
+      direction = next; lastHeartbeat = Date.now();
+      send({ type: 'scroll', direction: next, speed: prefRef.current.gamepadScrollSpeed, source: controllerSource.current, sequence: ++controllerSequence.current });
+    };
+    const stop = () => { if (direction) scroll(0); input = new GamepadInput(); };
+    const blur = () => { focused = false; stop(); };
+    const focus = () => { focused = true; input = new GamepadInput(); };
+    const visibility = () => { if (document.hidden) stop(); };
     const timer = setInterval(() => {
-      for (const pad of navigator.getGamepads?.() ?? []) {
-        if (!pad) continue;
-        for (const [button, direction] of [[preferences.previousButton, -1], [preferences.nextButton, 1]]) {
-          const key = `${pad.index}:${pad.id}:${button}`, down = pad.buttons[button]?.pressed ?? false;
-          if (down && pressed.get(key) === false) currentActions.current.movePage(direction); pressed.set(key, down);
-        }
+      if (!focused || document.hidden || document.querySelector('dialog[open], .editor-expanded') || document.activeElement?.closest('input,textarea,select,[contenteditable="true"]')) { stop(); return; }
+      const sampled = input.sample(navigator.getGamepads?.() ?? [], prefRef.current);
+      for (const key of sampled.actions) {
+        const action = gamepadActions.find(action => action.key === key)!;
+        if (action.unit !== 'scroll') { if (direction) scroll(0); send({ type: 'navigate', unit: action.unit, direction: action.direction }); }
       }
-    }, 50); return () => clearInterval(timer);
-  }, [preferences.gamepadEnabled, preferences.nextButton, preferences.previousButton, route, view]);
+      if (sampled.actions.length) input = new GamepadInput();
+      // A navigation press takes precedence over a simultaneous scroll hold.
+      const next = sampled.actions.length ? 0 : sampled.scroll;
+      if (next !== direction || (next && Date.now() - lastHeartbeat >= 200)) scroll(next);
+    }, 25);
+    window.addEventListener('blur', blur); window.addEventListener('focus', focus); window.addEventListener('pagehide', stop);
+    document.addEventListener('visibilitychange', visibility);
+    return () => { clearInterval(timer); stop(); window.removeEventListener('blur', blur); window.removeEventListener('focus', focus); window.removeEventListener('pagehide', stop); document.removeEventListener('visibilitychange', visibility); };
+  }, [preferences.gamepadEnabled, preferences.gamepadScrollSpeed, controllerBindings, route, view, connected, send]);
   useEffect(() => () => { micGeneration.current++; stopSpeech.current?.(); }, []);
   useEffect(() => { if (route === 'output') { document.body.classList.add('output-body'); document.documentElement.classList.add('output-root'); if (window.OpenKneeboard?.SetPreferredPixelSize) void window.OpenKneeboard.SetPreferredPixelSize(1200, 900); } }, [route]);
   const toggleMic = async () => {
@@ -110,7 +128,7 @@ export function App() {
     <aside className="sidebar"><div className="brand">PRMTA<span>_</span></div><div className="workspace-switch"><span className="workspace-avatar">P</span><div>My studio<small>{live.workspace === 'local' ? 'LOCAL LIBRARY' : 'CLOUD LIBRARY'}</small></div></div>
       <div className="nav-caption">WORKSPACE</div><nav aria-label="Workspace">{[{ id: 'studio', icon: Radio, label: 'Prompter' }, { id: 'library', icon: LibraryIcon, label: 'Library' }, { id: 'outputs', icon: Monitor, label: 'Outputs' }].map(item => <button key={item.id} aria-label={item.label} title={item.label} aria-current={view === item.id ? 'page' : undefined} className={view === item.id ? 'active' : ''} onClick={() => { setView(item.id as View); if (item.id === 'library') setFilter('all'); }}><item.icon size={18}/>{item.label}{item.id === 'library' && <span className="nav-count">{scripts.filter(s => !s.deleted).length}</span>}{item.id === 'outputs' && <span className="tiny-tag">VR</span>}</button>)}</nav>
       <div className="nav-caption library-caption">YOUR SCRIPTS<button aria-label="New script" onClick={() => void create()}><Plus size={16}/></button></div><nav className="folder-nav" aria-label="Script library"><button className={filter === 'favorites' && view === 'library' ? 'active' : ''} onClick={() => { setView('library'); setFilter('favorites'); }}><Star size={16}/>Favorites</button>{folders.map(f => <button key={f} onClick={() => { setView('library'); setFilter(`folder:${f}`); }}><FolderOpen size={16}/><span>{f}</span></button>)}<button className={filter === 'trash' && view === 'library' ? 'active' : ''} onClick={() => { setView('library'); setFilter('trash'); }}><Trash2 size={16}/>Trash</button></nav>
-      <div className="sidebar-bottom"><div className="local-card"><span className="status-dot"/><strong>Local first. Always.</strong><p>{live.workspace !== 'local' ? 'Cloud library active' : 'Your scripts stay with you.'}</p><button onClick={() => setView('settings')}>{preferences.cloudFolder ? 'Manage library' : 'Connect cloud folder'}<ArrowUpRight size={14}/></button></div><button aria-label="Settings" title="Settings" aria-current={view === 'settings' ? 'page' : undefined} className={view === 'settings' ? 'bottom-nav active' : 'bottom-nav'} onClick={() => setView('settings')}><Settings2 size={18}/>Settings</button><button className="bottom-nav" aria-label="Quick start" title="Quick start" onClick={() => setHelp(true)}><CircleHelp size={18}/>Quick start<span className="version">v0.2</span></button></div>
+      <div className="sidebar-bottom"><div className="local-card"><span className="status-dot"/><strong>Local first. Always.</strong><p>{live.workspace !== 'local' ? 'Cloud library active' : 'Your scripts stay with you.'}</p><button onClick={() => setView('settings')}>{preferences.cloudFolder ? 'Manage library' : 'Connect cloud folder'}<ArrowUpRight size={14}/></button></div><button aria-label="Settings" title="Settings" aria-current={view === 'settings' ? 'page' : undefined} className={view === 'settings' ? 'bottom-nav active' : 'bottom-nav'} onClick={() => setView('settings')}><Settings2 size={18}/>Settings</button><button className="bottom-nav" aria-label="Quick start" title="Quick start" onClick={() => setHelp(true)}><CircleHelp size={18}/>Quick start<span className="version">v0.3.0</span></button></div>
     </aside>
     <main className="main-shell" id="main-content" tabIndex={-1}><header className="topbar"><div className="breadcrumbs">Workspace<ChevronRight size={13}/><strong>{{ studio: 'Prompter', library: 'Script library', outputs: 'Outputs', settings: 'Settings' }[view]}</strong></div><div className="topbar-actions"><span className={`connection-pill ${connected ? '' : 'offline'}`}><i/>{connected ? 'Studio connected' : 'Disconnected'}</span><button className="button secondary small" onClick={() => void create()}><Plus size={15}/>Create script</button></div></header>
       {live.upgradeRequired && <div className="notice warning">Your cloud library needs a format upgrade. Your local library is active.<button className="text-button" onClick={() => setView('settings')}>Review cloud library</button></div>}

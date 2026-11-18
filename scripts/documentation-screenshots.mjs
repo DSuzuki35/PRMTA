@@ -36,8 +36,10 @@ try {
   await page.screenshot({ path: 'docs/images/settings.png', mask: [page.locator('.storage-note code')], maskColor: '#25262c' });
   await page.getByLabel('Local model').scrollIntoViewIfNeeded();
   await page.screenshot({ path: 'docs/images/models.png', mask: [page.locator('.storage-note code')], maskColor: '#25262c' });
+  await page.locator('.settings-card').filter({ has: page.getByRole('heading', { name: 'Joystick / Gamepad', exact: true }) }).screenshot({ path: 'docs/images/controllers.png' });
+  await page.locator('.settings-card').filter({ has: page.getByRole('heading', { name: 'App updates', exact: true }) }).screenshot({ path: 'docs/images/updates.png' });
   await page.getByLabel('Cloud library folder', { exact: true }).fill(join(dir, 'cloud'));
   await page.getByRole('button', { name: 'Open cloud library', exact: true }).click();
   await page.getByRole('dialog').screenshot({ path: 'docs/images/cloud-switch.png', mask: [page.locator('.folder-path')], maskColor: '#25262c' });
-  console.log('Created English screenshots including expanded editor and cloud switch confirmation.');
+  console.log('Created English screenshots including controller assignments, updates, expanded editor and cloud switch confirmation.');
 } finally { await app.close(); rmSync(dir, { recursive: true, force: true }); }

@@ -8,6 +8,24 @@ import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { createHost } from '../server/host';
 
+it('rejects remote and admin playback during the update handoff and restores control after cancellation', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prmta-update-handoff-')); let canControl = false;
+  const host = await createHost({ dataDir: dir, port: 0, canControl: () => canControl });
+  try {
+    host.session.load({ id: randomUUID(), title: 'Take', content: 'one two three' });
+    const play = (token: string) => fetch(`${host.origin}/api/command`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'play', countdown: 0 }) });
+    for (const token of [host.tokens.remote, host.tokens.admin]) {
+      const blocked = await play(token);
+      expect(blocked.status).toBe(409);
+      expect((await blocked.json()).error).toMatch(/update/i);
+      expect(host.session.state.playing).toBe(false);
+    }
+    canControl = true;
+    expect((await play(host.tokens.remote)).status).toBe(200);
+    expect(host.session.state.playing).toBe(true);
+  } finally { await host.close(); rmSync(dir, { recursive: true, force: true }); }
+});
+
 it('uses the current Whisper endpoint for setup and status before preferences finish saving', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'prmta-port-'));
   const speech = createServer((req, res) => { req.resume(); res.setHeader('Content-Type', 'application/json'); res.end(req.url === '/inference' ? '{"text":"one two three"}' : '{"status":"ok"}'); });

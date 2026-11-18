@@ -4,7 +4,7 @@ PRMTA is a Windows teleprompter studio with a local script library. The interfac
 
 ## Your first take
 
-1. Start `PRMTA-0.2.5-Windows-x64.exe`. Keep the application open during your take.
+1. Install and open PRMTA using the Windows x64 Setup download. A portable download is also available. Keep the application open during your take.
 2. Click **Try a sample**, or **Create script** to write your own.
 3. In **Library**, name the script, paste your text and click **Load in prompter**. Editing autosaves after a short pause. The save indicator confirms success.
 4. Choose **Auto**, **Voice**, or **Manual**. Press **Play** or Space.
@@ -113,7 +113,32 @@ Links contain bearer access tokens: anyone with a remote link on the enabled net
 
 Shortcuts work while the studio or remote has focus and you are not typing in a field. They are not system-wide shortcuts. Keyboard presenters and foot pedals can send these keys.
 
-For controllers, enable **Controller buttons** in Settings, connect the device, and press a button once so the browser can expose it. Previous and next page use zero-based Gamepad API button indices, defaulting to 4 and 5 (commonly the shoulder buttons). Click **Assign button**, then press and release the desired button. A full release → press → release cycle is required, so stuck or initially held buttons are ignored. A disconnect does not count as release. Escape cancels assignment. Page navigation is suspended while Settings is open. Joysticks that do not expose a browser gamepad interface need a keyboard mapping utility.
+For controllers, enable **Enable controller buttons** in **Settings → Joystick / Gamepad**, connect the device, and press a button once so the browser can expose it. Eight actions can be assigned:
+
+| Action pair | Behavior |
+| --- | --- |
+| Previous / next page | Jump to page boundaries, including explicit page separators. |
+| Previous / next paragraph | Navigate paragraphs separated by blank lines. |
+| Previous / next sentence | Navigate sentence boundaries. |
+| Scroll up / down | Hold to scroll smoothly; release to stop. |
+
+Previous and next page default to zero-based Gamepad API button indices 4 and 5 (commonly the shoulder buttons). The other actions begin unassigned. Click **Assign button**, then press and release the desired button. A full release → press → release cycle is required, so stuck or initially held buttons are ignored. A disconnect does not count as release. Escape cancels assignment. A button cannot be assigned to two actions; clear its existing assignment before moving it.
+
+**Held scroll speed (WPM)** sets 20–400 words per minute, independent of the Auto playback speed. Manual controller navigation pauses the take so voice or timed playback cannot immediately pull it away. Previous/next jumps to the adjacent unit; Previous goes to the previous unit even if you are midway through the current one. At the first or last unit, navigation stays at that boundary.
+
+Held scrolling temporarily uses continuous text, including on outputs configured for pages. A **Manual scroll** notice explains the temporary layout. Release stops at the current position; page layout returns on navigation, playback or reset. Controller navigation is suspended in Settings, while typing, and when a dialog is open. Lost focus or a disconnected controller stops held scrolling. Joysticks that do not expose a browser gamepad interface need a keyboard mapping utility.
+
+![Controller assignments and scrolling speed](images/controllers.png)
+
+## Application updates
+
+Use the **Setup installer** to enable automatic Windows updates. The installed application checks GitHub shortly after startup and every six hours, and downloads an available update in the background. **Settings → App updates** shows the current version, progress and update status. Finish and pause your take, then choose **Restart and install** when the update is ready. Playback or held controller scrolling blocks installation. PRMTA waits for pending script saves; if a draft cannot be saved, reopen that script, resolve the error and save it before retrying.
+
+Portable executables and development builds cannot install updates automatically. Existing portable users can download the Setup installer from [Releases](https://github.com/DSuzuki35/PRMTA/releases/latest), close the portable app and install PRMTA. The installer uses the same application profile, preserving saved scripts and preferences. You can also continue downloading portable versions manually.
+
+Checks wait while playback or controller scrolling is active and retry after five minutes. A download already in progress can finish in the background. Update checks require an internet connection; script reading and local speech recognition do not. If a check or download fails, use the retry action in Settings. These Windows builds are unsigned.
+
+![Application update settings](images/updates.png)
 
 ## Cloud libraries and backup
 

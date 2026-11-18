@@ -15,17 +15,18 @@
 - **Your pace:** timed WPM scrolling, voice following or manual navigation; continuous reading-line and page-by-page layouts, optional smooth line transitions and wheel navigation.
 - **Script library:** UTF-8 TXT revisions, SQLite indexing, folders, tags, favorites, search, autosave, draft recovery, local version history, reversible local trash and an editor that expands inside the app window.
 - **Cloud libraries:** one current, readable TXT per script in a Dropbox, OneDrive or iCloud Drive folder. Edits and deletions work both ways; choose whether to copy current scripts when switching libraries.
-- **Control options:** keyboard shortcuts, mapped gamepad/joystick buttons, keyboard foot pedals and an optional phone remote over your private LAN.
+- **Control options:** keyboard shortcuts, eight assignable gamepad/joystick actions for pages, paragraphs, sentences and smooth held scrolling, keyboard foot pedals and an optional phone remote over your private LAN.
+- **Windows updates:** the installed app checks for new releases and downloads updates in the background. Restart and install when your take is finished.
 - **English interface:** designed with the [Dan Suzuki UI Kit](https://dansuzuki.com/ui-kit/), with locally bundled fonts. Script content can remain in its original language.
 
 ## Get started
 
-1. Download `PRMTA-0.2.5-Windows-x64.exe` from [Releases](https://github.com/DSuzuki35/PRMTA/releases/latest).
-2. Run it and choose **Try a sample** or **Create script**.
+1. Download the **Windows x64 Setup** installer from [Releases](https://github.com/DSuzuki35/PRMTA/releases/latest).
+2. Install and open PRMTA, then choose **Try a sample** or **Create script**.
 3. Press **Play**. For voice following, click **Enable voice** above the preview, then Play.
 4. In **Outputs**, choose an external monitor, copy a browser link or add the VR link to OpenKneeboard.
 
-The portable Windows x64 build includes the local CPU speech engine and Base model. It extracts at launch; allow a moment for the first start. No account or API key is required. The executable is not code-signed. The application stores persistent scripts and preferences in the Windows application profile, not next to the portable executable.
+Both Windows x64 downloads include the local CPU speech engine and Base model. The **Setup installer** enables automatic updates; a **portable executable** is also available for manual updates and extracts at launch. Existing portable users can install PRMTA to keep their current profile and enable automatic updates. No account or API key is required. The executables are not code-signed. Persistent scripts and preferences live in the Windows application profile, not next to the executable.
 
 PRMTA 0.2.0 preserves the existing PRMPT 0.1 profile when available. Version 0.2.5 converts old cloud revision folders to current TXT files after verifying a local backup. Use 0.2.5 or newer with converted cloud folders.
 
@@ -79,7 +80,7 @@ For speech and a distributable build:
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/setup-whisper.ps1
 npm run package
-npx electron-builder --win portable
+npx electron-builder --win nsis portable --x64 --publish never
 ```
 
 `npm run serve` starts the browser studio after a build. Model downloads and native display selection are desktop features; configure an external local Whisper server for the standalone browser host.

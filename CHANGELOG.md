@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 - Controller navigation and Windows updates
+
+- Added eight assignable controller actions: previous/next page, paragraph and sentence, plus hold-to-scroll up/down.
+- Added independent controller scrolling speed, smooth synchronized movement and stop safeguards for release, disconnect and lost input.
+- Preserved release/press/release assignment, rejected duplicate assignments and added clearing of optional bindings.
+- Added a Windows Setup installer with automatic update checks, background downloads and an explicit restart-and-install action in Settings. Portable builds remain available for manual updates.
+- Included configurable local Whisper ports and validation for external loopback speech servers.
+- Updated English documentation and controller/update screenshots.
+
 ## 0.2.5 - Cloud libraries and expanded editor
 
 - Separate local and cloud libraries, with an explicit copy-current-scripts or open-folder-only choice.

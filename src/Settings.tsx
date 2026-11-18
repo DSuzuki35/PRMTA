@@ -7,6 +7,7 @@ import { WhisperConnection } from './WhisperConnection';
 import { MicrophoneMeter } from './MicrophoneMeter';
 import { GamepadAssignments } from './GamepadAssignments';
 import { CloudSettings } from './CloudSettings';
+import { UpdateSettings } from './UpdateSettings';
 export function Settings({ preferences, onChange, report }: { preferences: Preferences; onChange: (p: Preferences) => void; report: (text: string) => void }) {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   useEffect(() => { void navigator.mediaDevices?.enumerateDevices().then(list => setDevices(list.filter(d => d.kind === 'audioinput'))); }, []);
@@ -19,5 +20,6 @@ export function Settings({ preferences, onChange, report }: { preferences: Prefe
     <section className="settings-card"><h2>Playback</h2><Range label="Countdown" value={preferences.countdown} min={0} max={15} suffix=" s" onChange={v => onChange({ ...preferences, countdown: v })}/><Toggle label="Loop at end of script" checked={preferences.loop} onChange={v => onChange({ ...preferences, loop: v })}/></section>
     <section className="settings-card"><h2>Joystick / Gamepad</h2><Toggle label="Enable controller buttons" checked={preferences.gamepadEnabled} onChange={v => onChange({ ...preferences, gamepadEnabled: v })}/><GamepadAssignments preferences={preferences} onChange={onChange}/></section>
     <section className="settings-card"><h2><Keyboard size={21}/>Keyboard & presenter</h2><div className="shortcut-grid">{[['Space', 'Start / Pause'], ['← / →', 'Back / forward 5 words'], ['↑ / ↓', 'Increase / decrease speed'], ['Page Up / Down', 'Previous / next page'], ['Home', 'Back to start'], ['B', 'Blackout'], ['F', 'Fullscreen'], ['Esc', 'Pause']].map(([key, action]) => <div key={key}><kbd>{key}</kbd><span>{action}</span></div>)}</div><p className="muted">Keyboard presenters and mapped foot pedals work with these shortcuts. Shortcuts are ignored while typing in text fields.</p></section>
+    <UpdateSettings report={report}/>
   </div>;
 }

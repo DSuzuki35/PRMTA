@@ -34,6 +34,18 @@ export const defaultAppearance: Appearance = {
   color: '#f2f1eb', background: '#101113',
   flow: 'scroll', smoothVoice: true,
 };
+const buttonSchema = z.number().int().min(0).max(31).nullable();
+export const gamepadActions = [
+  { key: 'previousButton', label: 'Previous page', unit: 'page', direction: -1 },
+  { key: 'nextButton', label: 'Next page', unit: 'page', direction: 1 },
+  { key: 'previousParagraphButton', label: 'Previous paragraph', unit: 'paragraph', direction: -1 },
+  { key: 'nextParagraphButton', label: 'Next paragraph', unit: 'paragraph', direction: 1 },
+  { key: 'previousSentenceButton', label: 'Previous sentence', unit: 'sentence', direction: -1 },
+  { key: 'nextSentenceButton', label: 'Next sentence', unit: 'sentence', direction: 1 },
+  { key: 'scrollUpButton', label: 'Scroll up (hold)', unit: 'scroll', direction: -1 },
+  { key: 'scrollDownButton', label: 'Scroll down (hold)', unit: 'scroll', direction: 1 },
+] as const;
+export type GamepadActionKey = typeof gamepadActions[number]['key'];
 export const preferencesSchema = z.object({
   profiles: z.object({ studio: appearanceSchema, display: appearanceSchema, vr: appearanceSchema }),
   cloudFolder: z.string().max(2000), whisperUrl: z.string().max(2000),
@@ -42,7 +54,18 @@ export const preferencesSchema = z.object({
   language: z.enum(['de', 'en', 'auto']), provider: z.enum(['whisper', 'browser']),
   microphoneId: z.string().max(500), countdown: z.number().int().min(0).max(15),
   loop: z.boolean(), speed: z.number().min(20).max(400),
-  gamepadEnabled: z.boolean().default(false), previousButton: z.number().int().min(0).max(31).default(4), nextButton: z.number().int().min(0).max(31).default(5),
+  gamepadEnabled: z.boolean().default(false), previousButton: buttonSchema.default(4), nextButton: buttonSchema.default(5),
+  previousParagraphButton: buttonSchema.default(null), nextParagraphButton: buttonSchema.default(null),
+  previousSentenceButton: buttonSchema.default(null), nextSentenceButton: buttonSchema.default(null),
+  scrollUpButton: buttonSchema.default(null), scrollDownButton: buttonSchema.default(null),
+  gamepadScrollSpeed: z.number().min(20).max(400).default(130),
+}).superRefine((preferences, context) => {
+  const assigned = new Set<number>();
+  for (const { key } of gamepadActions) {
+    const button = preferences[key]; if (button === null) continue;
+    if (assigned.has(button)) context.addIssue({ code: 'custom', path: [key], message: 'Each controller button can have only one action.' });
+    assigned.add(button);
+  }
 });
 export type Preferences = z.infer<typeof preferencesSchema>;
 export type Profile = keyof Preferences['profiles'];
@@ -53,11 +76,15 @@ export const defaultPreferences: Preferences = {
   whisperModel: 'base', voiceLatency: 'responsive',
   microphoneId: '', countdown: 3, loop: false, speed: 130,
   gamepadEnabled: false, previousButton: 4, nextButton: 5,
+  previousParagraphButton: null, nextParagraphButton: null, previousSentenceButton: null, nextSentenceButton: null,
+  scrollUpButton: null, scrollDownButton: null, gamepadScrollSpeed: 130,
 };
 export type SessionState = {
   script: { id: string; title: string; content: string } | null;
   position: number; playing: boolean; mode: 'manual' | 'timed' | 'voice'; speed: number;
   voiceHighlight?: number;
+  manualScroll?: boolean;
+  manualScrollActive?: boolean;
   blackout: boolean; loop: boolean; countdownUntil: number; elapsed: number;
   updatedAt: number; transportRevision: number; speech: { transcript: string; confidence: number; status: string };
 };
@@ -67,6 +94,8 @@ export const commandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('reset') }), z.object({ type: z.literal('blackout') }),
   z.object({ type: z.literal('seek'), position: z.number().finite() }),
   z.object({ type: z.literal('step'), words: z.number().min(-1000).max(1000) }),
+  z.object({ type: z.literal('navigate'), unit: z.enum(['page', 'paragraph', 'sentence']), direction: z.union([z.literal(-1), z.literal(1)]) }),
+  z.object({ type: z.literal('scroll'), direction: z.union([z.literal(-1), z.literal(0), z.literal(1)]), speed: z.number().min(20).max(400), source: z.string().uuid(), sequence: z.number().int().nonnegative() }),
   z.object({ type: z.literal('speed'), speed: z.number().min(20).max(400) }),
   z.object({ type: z.literal('mode'), mode: z.enum(['manual', 'timed', 'voice']) }),
   z.object({ type: z.literal('loop'), loop: z.boolean() }),
