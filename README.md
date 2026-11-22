@@ -102,4 +102,4 @@ PRMTA keeps scripts and local speech recognition on your computer. Cloud-folder 
 
 This release uses OpenKneeboard for VR rather than shipping a native OpenXR layer. It does not integrate Wispr Flow or promise semantic paraphrase tracking. Whisper's included engine uses CPU; Parakeet's optional runtime offers CPU or DirectML. Physical Elgato/VR/controller combinations require testing on your hardware. See [verification](docs/verification.md).
 
-The source is public for inspection. No general open-source license has been assigned to PRMTA itself. Third-party components retain their own licenses; see [third-party notices](THIRD-PARTY-NOTICES.md) and [licenses](licenses).
+PRMTA is open source under the [MIT License](LICENSE). You can use, modify and redistribute it, including commercially, while keeping the copyright and license notice. Third-party components and model weights retain their own licenses; see [third-party notices](THIRD-PARTY-NOTICES.md) and [licenses](licenses).

@@ -64,6 +64,10 @@
     ],
     "extraResources": [
       {
+        "from": "LICENSE",
+        "to": "LICENSE.prmta.txt"
+      },
+      {
         "from": "scripts",
         "to": "system-speech",
         "filter": [
@@ -125,5 +129,6 @@
   },
   "allowScripts": {
     "@kmamal/sdl@0.11.13": true
-  }
+  },
+  "license": "MIT"
 }

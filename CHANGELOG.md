@@ -2,6 +2,8 @@
 
 ## 0.4.0 - Custom shortcuts, voice commands and system speech
 
+- Released PRMTA as open source under the MIT License, with the license included in Windows and Mac packages. Third-party components and models retain their existing licenses.
+
 - Added configurable keyboard shortcuts for playback, word/sentence/paragraph/page/chapter navigation, held scrolling, speed, microphone, display and reading modes. Capture waits for key release, rejects duplicate/reserved combinations and supports clearing or restoring defaults.
 - Added independent keyboard scrolling speed and an option to keep an active Voice take running after keyboard navigation.
 - Added opt-in voice commands with a configurable wake phrase, including “prompta, next sentence”, “previous chapter”, play, pause and speed changes. Complete phrases, silence boundaries and stale-audio checks prevent premature or repeated actions. Command text never advances script matching.

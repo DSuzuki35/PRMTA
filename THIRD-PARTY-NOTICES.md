@@ -1,4 +1,8 @@
-# Bundled speech engine and model
+# Third-party notices
+
+PRMTA's own source code is licensed under the MIT License in `LICENSE` (also shipped as `resources/LICENSE.prmta.txt`). The following third-party components and model weights retain their original licenses and attribution.
+
+## Bundled speech engine and model
 
 The Windows distribution includes whisper.cpp v1.9.2 (https://github.com/ggml-org/whisper.cpp) and the multilingual Whisper base model from OpenAI, converted by whisper.cpp (https://huggingface.co/ggerganov/whisper.cpp).
 
