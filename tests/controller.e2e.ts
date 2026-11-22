@@ -10,6 +10,18 @@ const buttons = (page: Page, held: number[] = [], connected = true) => page.eval
   Object.defineProperty(navigator, 'getGamepads', { configurable: true, value: () => connected ? [{ index: 0, id: 'fixture controller', buttons: Array.from({ length: 16 }, (_, index) => ({ pressed: held.includes(index) })) }] : [] });
 }, { held, connected });
 const release = async (page: Page) => { await buttons(page); await page.waitForTimeout(80); };
+// A loaded CI runner can miss frames. Compare movement per 60 Hz interval,
+// rather than treating a long frame as an instantaneous virtual-window jump.
+const wordMotion = (page: Page, duration: number) => page.locator('.prompter-text').evaluate((el, duration) => new Promise<number>(resolve => {
+  const samples: { y: number; time: number }[] = [], start = performance.now();
+  const frame = (time: number) => {
+    const word = el.querySelector('[data-word="390"]');
+    if (word) samples.push({ y: word.getBoundingClientRect().y, time });
+    if (time - start < duration) requestAnimationFrame(frame);
+    else resolve(samples.length < 2 ? Infinity : Math.max(...samples.slice(1).map((sample, i) => Math.abs(sample.y - samples[i].y) * (1000 / 60) / Math.max(1000 / 60, sample.time - samples[i].time))));
+  };
+  requestAnimationFrame(frame);
+}), duration);
 test.beforeAll(async () => { dir = mkdtempSync(join(tmpdir(), 'prmta-controller-')); host = await createHost({ dataDir: dir, port: 0, staticDir: resolve('dist') }); });
 test.afterAll(async () => { await host.close(); rmSync(dir, { recursive: true, force: true }); });
 test.beforeEach(async () => {
@@ -21,14 +33,16 @@ test('assignments ignore stuck buttons, reject duplicates across actions, clear 
   await page.goto(host.url('admin')); await page.getByRole('button', { name: 'Settings', exact: true }).click();
   await buttons(page, [10]);
   await page.getByRole('button', { name: 'Assign next sentence button', exact: true }).click();
-  await page.waitForTimeout(150);
+  const status = page.locator('.gamepad-assignments .assignment-status');
+  await expect(status).toContainText('Already-held buttons are ignored');
   const field = page.locator('.assignment-field').filter({ hasText: 'Next sentence' });
   await expect(field.locator('output')).toHaveText('Button 7');
-  await buttons(page, [10, 5]); await page.waitForTimeout(80); await buttons(page, [10]);
+  await buttons(page, [10, 5]); await expect(status).toContainText('Release the button'); await buttons(page, [10]);
   await expect(page.locator('.settings-card').filter({ has: page.getByRole('heading', { name: 'Joystick / Gamepad', exact: true }) }).locator('.assignment-status')).toContainText('already assigned to Next page');
   await page.getByRole('button', { name: 'Clear next page button', exact: true }).click();
   await page.getByRole('button', { name: 'Assign next sentence button', exact: true }).click();
-  await page.waitForTimeout(80); await buttons(page, [10, 5]); await page.waitForTimeout(80); await buttons(page, [10]);
+  await expect(status).toContainText('Already-held buttons are ignored');
+  await buttons(page, [10, 5]); await expect(status).toContainText('Release the button'); await buttons(page, [10]);
   await expect(field.locator('output')).toHaveText('Button 5');
   await page.getByRole('slider', { name: 'Held scroll speed (WPM)', exact: true }).press('End');
   await expect.poll(() => host.library.getSetting<any>('preferences', {}).gamepadScrollSpeed).toBe(400);
@@ -97,18 +111,10 @@ test('held scroll moves output smoothly in page profiles and expires when the co
   await expect(output.locator('.page-number')).toContainText('Manual scroll');
   await page.waitForTimeout(200);
   // Crossing 384 rebases the virtual text window from 0 to 128.
-  const rebase = await output.locator('.prompter-text').evaluate(el => new Promise<number>(resolve => {
-    const positions: number[] = [], start = performance.now();
-    const frame = () => { const word = el.querySelector('[data-word="390"]'); if (word) positions.push(word.getBoundingClientRect().y); if (performance.now() - start < 1100) requestAnimationFrame(frame); else resolve(Math.max(...positions.slice(1).map((value, i) => Math.abs(value - positions[i])))); };
-    requestAnimationFrame(frame);
-  }));
+  const rebase = await wordMotion(output, 1100);
   expect(rebase).toBeLessThan(5);
   await buttons(page, [0]);
-  const reverse = await output.locator('.prompter-text').evaluate(el => new Promise<number>(resolve => {
-    const positions: number[] = [], start = performance.now();
-    const frame = () => { const word = el.querySelector('[data-word="390"]'); if (word) positions.push(word.getBoundingClientRect().y); if (performance.now() - start < 1300) requestAnimationFrame(frame); else resolve(Math.max(...positions.slice(1).map((value, i) => Math.abs(value - positions[i])))); };
-    requestAnimationFrame(frame);
-  }));
+  const reverse = await wordMotion(output, 1300);
   expect(reverse).toBeLessThan(5);
   await release(page); await expect.poll(() => host.session.scrolling).toBe(false);
   await page.waitForTimeout(50);
