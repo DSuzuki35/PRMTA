@@ -1,6 +1,6 @@
 # PRMTA on macOS
 
-The macOS build is experimental. This change was developed on Windows: Apple Speech compilation, the permission dialogs, microphone behavior, recognition accuracy, and packaged app launch still need verification on a real Mac. A successful CI package build verifies compilation and packaging, not microphone behavior.
+The macOS build is experimental. Apple Silicon and Intel DMG/ZIP packages have been built in CI, including Swift compilation, helper architecture, ad-hoc signature validation, permission descriptions and native language inventory. Permission dialogs, microphone behavior, recognition accuracy and interactive packaged app launch still need verification on a real Mac. See the [macOS build workflow](https://github.com/DSuzuki35/PRMTA/actions/workflows/macos.yml) for temporary experimental artifacts. Successful CI packaging does not verify microphone behavior.
 
 PRMTA's Electron 45 application requires **macOS 13 Ventura or later**, on Apple silicon (`arm64`) or Intel (`x64`). The speech helper itself targets macOS 12, but that does not lower the application's requirement. [Electron 44 removed macOS 12 support](https://www.electronjs.org/blog/electron-44-0).
 
