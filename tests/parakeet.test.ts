@@ -43,7 +43,7 @@ it('reports startup failures rather than leaving recognition promises hanging', 
   const worker = new ParakeetProcess(child); cleanup.push(() => worker.close());
   await expect(worker.ready).rejects.toThrow('model cannot load');
 });
-it('cancels an in-progress setup download and keeps setup retryable', async () => {
+it.skipIf(process.platform !== 'win32' || process.arch !== 'x64')('cancels an in-progress setup download and keeps setup retryable', async () => {
   const root = mkdtempSync(join(tmpdir(), 'prmta-parakeet-cancel-')); cleanup.push(() => rmSync(root, { recursive: true, force: true }));
   let started!: () => void; const downloadStarted = new Promise<void>(resolve => { started = resolve; });
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (_url, options) => {

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0 - Custom shortcuts, voice commands and system speech
+
+- Added configurable keyboard shortcuts for playback, word/sentence/paragraph/page/chapter navigation, held scrolling, speed, microphone, display and reading modes. Capture waits for key release, rejects duplicate/reserved combinations and supports clearing or restoring defaults.
+- Added independent keyboard scrolling speed and an option to keep an active Voice take running after keyboard navigation.
+- Added opt-in voice commands with a configurable wake phrase, including “prompta, next sentence”, “previous chapter”, play, pause and speed changes. Complete phrases, silence boundaries and stale-audio checks prevent premature or repeated actions. Command text never advances script matching.
+- Added chapter navigation using Markdown headings, or explicit page separators when no headings exist.
+- Added local Windows System.Speech recognition using installed speech languages. English is the default; existing language choices are retained.
+- Prepared macOS 13+ Apple Silicon/Intel builds with on-device Apple speech, permission descriptions, signing configuration and a manual build workflow. Real Mac permission/microphone testing remains required.
+- Added grid/list library views, overview delete buttons and a close button for the script editor with draft-save safeguards.
+- Provided both Windows Setup with automatic updates and the portable executable; updated English guides and screenshots.
+
 ## 0.3.1 - Background controllers and optional Parakeet
 
 - Added native SDL controller input in the Windows app, including generic joysticks/HOTAS and up to 128 raw buttons. Input continues while another app has focus or PRMTA is minimized.

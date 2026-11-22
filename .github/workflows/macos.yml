@@ -1,0 +1,53 @@
+name: macOS experimental packages
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    name: macOS ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      PRMTA_MAC_SIGNED: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - name: Package native architecture (compiles Swift helper before packaging)
+        run: npx electron-builder --config build/electron-builder.mac.cjs --mac --${{ matrix.arch }} --publish never
+      - name: Verify packaged helper and app signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          app_path=$(find release-macos -maxdepth 3 -name PRMTA.app -type d -print -quit)
+          test -n "$app_path"
+          helper_path="$app_path/Contents/Resources/system-speech/prmta-speech"
+          test -x "$helper_path"
+          lipo -verify_arch "${{ matrix.arch == 'x64' && 'x86_64' || 'arm64' }}" "$helper_path"
+          codesign --verify --deep --strict --verbose=2 "$app_path"
+          plutil -extract NSMicrophoneUsageDescription raw "$app_path/Contents/Info.plist"
+          plutil -extract NSSpeechRecognitionUsageDescription raw "$app_path/Contents/Info.plist"
+          node -e 'const {execFileSync}=require("node:child_process"); const result=JSON.parse(execFileSync(process.argv[1],["--status"],{encoding:"utf8",timeout:20000})); if(result.type!=="ready"||!Array.isArray(result.languages))throw new Error("Native speech inventory failed"); console.log(result);' "$helper_path"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PRMTA-macOS-${{ matrix.arch }}-experimental
+          path: |
+            release-macos/*.dmg
+            release-macos/*.zip
+          if-no-files-found: error
+          retention-days: 14

@@ -15,7 +15,9 @@ export function useSession(onLibrary?: () => void) {
       ws.onmessage = event => {
         const data: StateMessage = JSON.parse(event.data);
         if (data.session) setSession(previous => ({ ...previous, ...data.session, script: data.session!.script === undefined ? previous.script : data.session!.script }));
-        if (data.preferences) setPreferences(data.preferences);
+        // Output and remote clients receive only public appearance/countdown
+        // preferences. Keep safe local control defaults for omitted private keys.
+        if (data.preferences) setPreferences({ ...defaultPreferences, ...data.preferences });
         if (data.workspace) setWorkspace(data.workspace);
         if (data.upgradeRequired !== undefined) setUpgradeRequired(data.upgradeRequired);
         if (data.type === 'library') onLibrary?.();

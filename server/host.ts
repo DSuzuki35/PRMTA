@@ -13,6 +13,7 @@ import { Session } from './session';
 import { commandSchema, defaultPreferences, draftSchema, preferencesSchema, type Draft, type Command } from '../shared/model';
 import { modelById, type ModelsInfo } from '../shared/whisper-models';
 import { whisperEndpoint } from '../shared/whisper-endpoint';
+import type { SystemSpeechStatus, SystemSpeechLanguage } from '../shared/system-speech';
 
 type Role = 'admin' | 'output' | 'remote';
 type AuthRequest = Request & { role?: Role };
@@ -22,11 +23,12 @@ type ParakeetBackend = {
   ensure(acceleration: 'cpu' | 'directml'): Promise<void>;
   transcribe(wav: Buffer): Promise<{ text: string; ms: number }>;
 };
-export async function createHost(options: { dataDir: string; port?: number; staticDir?: string; canControl?: () => boolean; ensureSpeech?: (url: string, model: string) => Promise<void>; models?: { list: () => ModelsInfo; install: (id: string) => void }; parakeet?: ParakeetBackend }) {
+type SystemSpeechBackend = { status(): Promise<SystemSpeechStatus>; ensure(language: SystemSpeechLanguage): Promise<void>; transcribe(wav: Buffer, language?: SystemSpeechLanguage): Promise<{ text: string; ms: number }> };
+export async function createHost(options: { dataDir: string; port?: number; staticDir?: string; canControl?: () => boolean; ensureSpeech?: (url: string, model: string) => Promise<void>; models?: { list: () => ModelsInfo; install: (id: string) => void }; parakeet?: ParakeetBackend; systemSpeech?: SystemSpeechBackend; defaultProvider?: 'whisper' | 'system' }) {
   const localLibrary = new Library(options.dataDir); let library = localLibrary;
   let cloud: CloudLibrary | null = null;
   const opened = new Map<string, Library>(); const session = new Session();
-  let preferences = preferencesSchema.parse(library.getSetting('preferences', defaultPreferences));
+  let preferences = preferencesSchema.parse(library.getSetting('preferences', { ...defaultPreferences, provider: options.defaultProvider ?? defaultPreferences.provider }));
   const tokens = library.getSetting<Record<Role, string>>('tokens', { admin: randomBytes(32).toString('hex'), output: randomBytes(32).toString('hex'), remote: randomBytes(32).toString('hex') });
   library.setSetting('tokens', tokens);
   session.state.speed = preferences.speed; session.state.loop = preferences.loop;
@@ -155,6 +157,15 @@ export async function createHost(options: { dataDir: string; port?: number; stat
     const result = await mammoth.extractRawText({ buffer: req.body }); res.json({ text: result.value });
   });
   const whisperBase = (value = preferences.whisperUrl) => whisperEndpoint(value).origin;
+  app.get('/api/speech/system/status', admin, async (_req, res) => res.json(options.systemSpeech ? await options.systemSpeech.status() : {
+    managed: false, supported: false, platform: process.platform, engine: 'System speech', phase: 'unavailable', languages: [], message: 'Native speech recognition requires the Windows or macOS desktop app.',
+  }));
+  app.post('/api/speech/system/start', admin, async (req, res) => {
+    const { language } = z.object({ language: preferencesSchema.shape.language.optional() }).parse(req.body ?? {});
+    if (!options.systemSpeech) { res.status(503).json({ error: 'System speech requires the Windows or macOS desktop app.' }); return; }
+    if (speechBusy) { res.status(409).json({ error: 'Wait for the current transcription before changing recognition engines.' }); return; }
+    await options.systemSpeech.ensure(language ?? preferences.language); res.json(await options.systemSpeech.status());
+  });
   app.get('/api/speech/parakeet/status', admin, (_req, res) => res.json(options.parakeet?.status() ?? {
     managed: false, supported: false, installed: false, phase: 'unavailable', model: 'Parakeet TDT 0.6B v3',
     provider: null, received: 0, total: 0, percent: 0, message: 'Parakeet setup is available in the Windows desktop app.', error: null,
@@ -192,11 +203,16 @@ export async function createHost(options: { dataDir: string; port?: number; stat
     options.models.install(id); res.json(options.models.list());
   });
   app.post('/api/speech', admin, express.raw({ type: 'audio/wav', limit: '1mb' }), async (req, res) => {
-    const { whisperUrl, provider = 'whisper' } = z.object({ whisperUrl: z.string().max(2000).optional(), provider: z.enum(['whisper', 'parakeet']).optional() }).parse(req.query);
+    const { whisperUrl, provider = 'whisper', language } = z.object({ whisperUrl: z.string().max(2000).optional(), provider: z.enum(['whisper', 'parakeet', 'system']).optional(), language: preferencesSchema.shape.language.optional() }).parse(req.query);
     if (speechBusy) { res.status(429).json({ error: 'Speech recognition is still processing the previous audio.' }); return; }
     if (!Buffer.isBuffer(req.body) || req.body.length < 44 || req.body.toString('ascii', 0, 4) !== 'RIFF' || req.body.toString('ascii', 8, 12) !== 'WAVE') { res.status(400).json({ error: 'Expected valid WAV audio.' }); return; }
     speechBusy = true;
     try {
+      if (provider === 'system') {
+        if (!options.systemSpeech) { res.status(503).json({ error: 'System speech requires the desktop app.' }); return; }
+        const result = await options.systemSpeech.transcribe(req.body, language ?? preferences.language);
+        res.json({ text: result.text.slice(0, 2000).trim(), ms: result.ms }); return;
+      }
       if (provider === 'parakeet') {
         if (!options.parakeet) { res.status(503).json({ error: 'Parakeet requires the Windows desktop app.' }); return; }
         const result = await options.parakeet.transcribe(req.body);
@@ -209,7 +225,7 @@ export async function createHost(options: { dataDir: string; port?: number; stat
       if (!response.ok) throw new Error(`Whisper HTTP ${response.status}`);
       const result = await response.json() as { text?: string };
       res.json({ text: typeof result.text === 'string' ? result.text.slice(0, 2000).trim() : '' });
-    } catch { res.status(502).json({ error: provider === 'parakeet' ? 'Parakeet unavailable or too slow. Check its status in Settings and start it again.' : 'Whisper unavailable or too slow. Check the server and model.' }); }
+    } catch { res.status(502).json({ error: provider === 'system' ? 'System speech could not transcribe this audio. Check its language and permissions in Settings.' : provider === 'parakeet' ? 'Parakeet unavailable or too slow. Check its status in Settings and start it again.' : 'Whisper unavailable or too slow. Check the server and model.' }); }
     finally { speechBusy = false; }
   });
   const createListener = async (port: number, hostname: string) => {

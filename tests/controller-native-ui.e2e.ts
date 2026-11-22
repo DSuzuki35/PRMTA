@@ -33,9 +33,9 @@ test('desktop sends context and assigns using native button snapshots, including
   await expect.poll(() => page.evaluate(() => (window as any).contexts.at(-1))).toEqual({ blocked: true, assigning: true });
   await page.waitForTimeout(80);
   await page.evaluate(() => { (window as any).nativeButtons = [73]; });
-  await expect(page.locator('.assignment-status')).toContainText('Release the button');
+  await expect(page.locator('.settings-card').filter({ has: page.getByRole('heading', { name: 'Joystick / Gamepad', exact: true }) }).locator('.assignment-status')).toContainText('Release the button');
   await page.evaluate(() => { (window as any).nativeButtons = []; });
-  await expect(page.locator('.assignment-status')).toContainText('Button 73 assigned');
+  await expect(page.locator('.settings-card').filter({ has: page.getByRole('heading', { name: 'Joystick / Gamepad', exact: true }) }).locator('.assignment-status')).toContainText('Button 73 assigned');
   await expect.poll(() => host.getPreferences().nextSentenceButton).toBe(73);
   await expect.poll(() => page.evaluate(() => (window as any).contexts.at(-1))).toEqual({ blocked: true, assigning: false });
   await page.getByRole('switch', { name: 'Keep voice follow active', exact: true }).uncheck();
@@ -57,7 +57,7 @@ test('permanent native initialization failure retains foreground-only browser in
   await expect(page.getByText(/Foreground browser input is active/)).toBeVisible();
   await page.getByRole('button', { name: 'Assign next sentence button', exact: true }).click();
   await page.waitForTimeout(100); await page.evaluate(() => { (window as any).nativeButtons = [7]; });
-  await expect(page.locator('.assignment-status')).toContainText('Release the button');
+  await expect(page.locator('.settings-card').filter({ has: page.getByRole('heading', { name: 'Joystick / Gamepad', exact: true }) }).locator('.assignment-status')).toContainText('Release the button');
   await page.evaluate(() => { (window as any).nativeButtons = []; });
   await expect.poll(() => host.getPreferences().nextSentenceButton).toBe(7);
 });

@@ -2,9 +2,40 @@
 
 PRMTA separates speech recognition from script following. The selected engine turns short microphone windows into text. A bounded fuzzy alignment matches that text to nearby words in the script. Small omissions, fillers and slightly different wording are tolerated; arbitrary paraphrasing and large jumps are not guaranteed. At least three usable recognized words are required before matching advances. Forward matches must start near the current reading position (at most six omitted words, fewer for short phrases), and one result can advance at most 24 words. Distant accidental phrases are rejected instead of being used to seek. Earlier phrases never rewind playback. If you intentionally skip a larger passage, click the destination or use page navigation, then continue reading.
 
-Recognition is local with Whisper or Parakeet. The microphone is resampled to 16 kHz mono WAV; Whisper uses the loopback whisper.cpp server, while Parakeet uses a private local worker managed by the Windows app. The default **Responsive** setting keeps approximately three seconds of overlapping audio and checks every 500 ms after the first second of speech. **Steady** uses five seconds and a 1,000 ms check interval. Only one inference request runs at a time; slow inference does not queue additional work. Silence is gated. Pausing a take stops inference and clears buffered speech; resuming or loading a script starts with fresh audio. Actual highlight latency includes audio collection, model processing and the words needed for a confident match. Whisper's request timeout is 20 seconds; Parakeet's transcription timeout is 60 seconds.
+Recognition is local with Whisper, Parakeet or system speech. The microphone is resampled to 16 kHz mono WAV; Whisper uses the loopback whisper.cpp server, while Parakeet and system speech use private local workers. The default **Responsive** setting keeps approximately three seconds of overlapping audio and checks every 500 ms after the first second of speech. **Steady** uses five seconds and a 1,000 ms check interval. Only one inference request runs at a time; slow inference does not queue additional work. Silence is gated. Pausing a take stops script-follow inference and clears buffered speech; opt-in voice commands continue listening while the microphone is on. Resuming or loading a script starts following with fresh audio. Actual highlight latency includes audio collection, model processing and the words needed for a confident match. Whisper's request timeout is 20 seconds; Parakeet's transcription timeout is 60 seconds.
 
-New profiles default to **English** for Whisper and browser recognition. Existing language preferences are retained. Parakeet uses automatic language detection and does not use the **Script language** selector.
+New profiles default to **English** for Whisper, system speech and browser recognition. Existing language preferences are retained. Parakeet uses automatic language detection and does not use the **Script language** selector.
+
+## System speech: Windows and Apple
+
+Select **Windows / Apple · system speech** in Settings. The status panel inventories installed languages without requesting microphone or speech permission. **Prepare system speech** initializes the selected engine; turning on the microphone also prepares it if needed. Both paths use your selected script language. Automatic uses English for this provider.
+
+On Windows, PRMTA uses the installed [System.Speech recognizer](https://learn.microsoft.com/en-us/dotnet/api/system.speech.recognition.speechrecognitionengine?view=netframework-4.8). It processes audio locally through a private worker. Install a supported speech language in Windows if it is absent; Windows voice typing availability alone does not guarantee that System.Speech exposes that language. PRMTA lists the recognizers it can actually use.
+
+The experimental macOS build uses Apple's Speech framework. It requires both [on-device recognition support](https://developer.apple.com/documentation/speech/sfspeechrecognizer/supportsondevicerecognition) and [on-device-only recognition requests](https://developer.apple.com/documentation/speech/sfspeechrecognitionrequest/requiresondevicerecognition). There is no online fallback. Apple speech permission is requested only when preparing or using the engine; microphone capture has its own permission. Missing permissions or language support produce an error. See [Mac build and device testing](MACOS.md).
+
+The worker receives bounded in-memory WAV audio, not recordings saved to disk. Startup and inference speed depend on the installed recognizer and hardware. On our Windows fixture, the engine initialized quickly but recognition was considerably less accurate than Parakeet; system speech is an additional choice, not an accuracy upgrade. Test your own script before recording. The standalone browser host does not provide these desktop-native workers.
+
+![System speech setup](images/system-speech.png)
+
+## Voice commands
+
+Enable commands in **Settings > Voice commands** and connect the microphone. The default wake phrase is **prompta**, with **prmta** and **prompt a** accepted as recognition variants. A custom wake phrase uses its own exact wording. Commands are English independently of the script language.
+
+| Say after the wake phrase | Action |
+| --- | --- |
+| play / start / resume | Start or resume playback. |
+| pause / stop | Pause playback; keep the microphone listening. |
+| reset / back to start | Return to the start. |
+| next / previous | Move one page. |
+| next / previous sentence, paragraph, page or chapter | Move the named unit. |
+| faster / speed up; slower / slow down | Change playback speed by five WPM. |
+| blackout / toggle blackout | Toggle hidden output. |
+| voice mode / auto mode / timed mode / manual mode | Change reading mode. |
+
+Leave at least a brief pause before and after each command (the local audio gate requires about 650 ms of quiet). PRMTA waits for the final phrase; an interim “prompta, next” cannot prematurely turn a page when you are saying “prompta, next sentence”. Repeated results from the same audio execute once. A new spoken command after silence can intentionally repeat the action. Command text is consumed separately from script matching, and results captured before a seek or mode change are discarded.
+
+Commands listen while playback is paused only when enabled and the microphone is on. They are suspended while typing, in Settings or dialogs, while assigning controls and during manual held scrolling. Switching off the microphone stops all listening. A wake phrase embedded or quoted inside ordinary prose is not a command; avoid starting script sentences with your configured wake phrase. Unknown addressed commands do not advance the script.
 
 ## NVIDIA Parakeet (optional)
 
@@ -34,7 +65,7 @@ Parakeet is a desktop-managed provider. The standalone browser host does not ins
 
 In the studio inspector, select an **Output profile**, then use **Reading area > Smooth voice highlighting**. It is enabled by default, independently for studio, display/browser and VR. **Highlight current word** must also be enabled. Browser recognition retains recognition-driven highlighting because it does not supply the local waveform gate.
 
-With local Whisper or Parakeet, PRMTA monitors the microphone waveform energy (RMS) with a short attack/release gate and noise-floor tracking, including stable room noise. After a script match, it can preview up to two upcoming words while audio remains active. It learns words per second from confirmed progress and voiced time over the last two minutes of the current take. Until enough observations exist, it uses a conservative initial pace. Very short recognition bursts and implausible rate samples do not train the estimate.
+With local Whisper, Parakeet or system speech, PRMTA monitors the microphone waveform energy (RMS) with a short attack/release gate and noise-floor tracking, including stable room noise. After a script match, it can preview up to two upcoming words while audio remains active. It learns words per second from confirmed progress and voiced time over the last two minutes of the current take. Until enough observations exist, it uses a conservative initial pace. Very short recognition bursts and implausible rate samples do not train the estimate.
 
 The estimate stops advancing during a pause, and lost audio heartbeats expire after 350 ms. New recognition corrects it, including moving the visual highlight back if the guess was wrong. After 2.5 seconds without a fresh matching result, it returns to the confirmed word. Reset, seek, mode changes and pause/resume clear the estimate and pace history. This is a visual aid: predicted words are not marked as read, do not steer speech matching and cannot turn a page. The reading guide and page changes still follow confirmed progress.
 
@@ -106,4 +137,4 @@ The setup script downloads pinned whisper.cpp v1.9.2 binaries and multilingual B
 5. If you skip a large section, click the new passage or use page navigation. If you go off script, PRMTA should wait rather than scroll blindly.
 6. If a microphone is unplugged, reconnect it and turn capture on again. Permission errors are shown in the studio.
 
-Browser speech recognition is optional and browser-dependent. It may use an online service and may be unavailable in Electron. Its Automatic language option uses English. Local Whisper is the desktop default; local Parakeet is an optional provider. PRMTA does not currently integrate the proprietary Wispr Flow application.
+Browser speech recognition is optional and browser-dependent. It may use an online service and may be unavailable in Electron. Its Automatic language option uses English. Local Whisper is the Windows default; Apple system speech is the default for new Mac profiles. Local Parakeet is an optional Windows provider. PRMTA does not currently integrate the proprietary Wispr Flow application.

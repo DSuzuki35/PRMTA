@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowUpRight, Bold, Copy, Download, Highlighter, History, Save, Star, Trash2, Undo2, Maximize2, Minimize2 } from 'lucide-react';
+import { ArrowUpRight, Bold, Copy, Download, Highlighter, History, Save, Star, Trash2, Undo2, Maximize2, Minimize2, X } from 'lucide-react';
 import type { Revision, Script } from '../shared/model';
 import { tokenize, formatTime } from '../shared/text';
 import { api } from './api';
@@ -7,8 +7,27 @@ import { Modal } from './Modal';
 import { recoverDraft } from './drafts';
 import { registerUpdateSave } from './updateSafety';
 
-export function Editor({ script, onSaved, onLoad, onCopy, report }: { script: Script; onSaved: (s: Script) => void; onLoad: (id: string) => Promise<void>; onCopy: (s: Script) => Promise<void>; report: (s: string) => void }) {
+const draftCacheKey = (script: Script) => script.workspace && script.workspace !== 'local' ? `prmpt-draft:${script.workspace}:${script.id}` : `prmpt-draft:${script.id}`;
+// Unmounted editors remain registered until their last save finishes. Deletion
+// must join that save queue instead of racing an older, non-deleted snapshot.
+const draftTrashActions = new Map<string, () => Promise<Script>>();
+export async function trashLibraryScript(script: Script): Promise<Script> {
+  const key = draftCacheKey(script), trashDraft = draftTrashActions.get(key);
+  if (trashDraft) return trashDraft();
+  // The confirmation can outlive the previous editor's final save. Refresh its
+  // revision rather than submitting the snapshot captured when the modal opened.
+  const latest = (await api<Script[]>('/scripts')).find(candidate => candidate.id === script.id && (candidate.workspace ?? 'local') === (script.workspace ?? 'local'));
+  if (!latest) throw new Error('Library changed or script is no longer available. Reopen it before moving it to trash.');
+  let draft = latest;
+  try { draft = recoverDraft(latest, localStorage.getItem(key)); } catch { /* The saved script remains available. */ }
+  const saved = await api<Script>('/scripts', { draft: { ...draft, title: draft.title.trim() ? draft.title : latest.title, deleted: true }, expectedHeads: draft.heads, workspace: latest.workspace });
+  try { localStorage.removeItem(key); } catch { /* A confirmed tombstone still owns the saved state. */ }
+  return saved;
+}
+
+export function Editor({ script, onSaved, onLoad, onCopy, onClose, report }: { script: Script; onSaved: (s: Script) => void; onLoad: (id: string) => Promise<void>; onCopy: (s: Script) => Promise<void>; onClose: () => void; report: (s: string) => void }) {
   const [expanded, setExpanded] = useState(false);
+  const [closing, setClosing] = useState(false);
   const editor = useRef<HTMLElement>(null), expandButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!expanded || !editor.current) return;
@@ -30,7 +49,7 @@ export function Editor({ script, onSaved, onLoad, onCopy, report }: { script: Sc
     document.addEventListener('keydown', key, true);
     return () => { for (const [element, value] of inert) element.inert = value; document.removeEventListener('keydown', key, true); };
   }, [expanded]);
-  const cacheKey = script.workspace && script.workspace !== 'local' ? `prmpt-draft:${script.workspace}:${script.id}` : `prmpt-draft:${script.id}`;
+  const cacheKey = draftCacheKey(script);
   const [draft, setDraft] = useState<Script>(() => { try { return recoverDraft(script, localStorage.getItem(cacheKey)); } catch { return script; } });
   const current = useRef(draft); const heads = useRef(draft.heads);
   const [status, setStatus] = useState(draft !== script ? 'Draft recovered' : 'Saved'); const dirty = useRef(draft !== script); const pending = useRef<Promise<Script> | null>(null);
@@ -67,18 +86,39 @@ export function Editor({ script, onSaved, onLoad, onCopy, report }: { script: Sc
   useEffect(() => { if (!dirty.current) return; const timer = setTimeout(() => { void persist().catch(() => {}); }, 900); return () => clearTimeout(timer); }, [version]);
   useEffect(() => {
     let mounted = true;
+    const trashDraft = async () => {
+      const previousDeleted = current.current.deleted, previousTitle = current.current.title;
+      const deletionTitle = previousTitle.trim() ? previousTitle : script.title;
+      update({ deleted: true, title: deletionTitle });
+      try { return await persist(); }
+      catch (error) {
+        // A rejected deletion must not remain queued for autosave or close.
+        // Restore just its fields so edits made while saving remain intact.
+        update({ deleted: previousDeleted, ...(current.current.title === deletionTitle ? { title: previousTitle } : {}) });
+        throw error;
+      }
+    };
+    draftTrashActions.set(cacheKey, trashDraft);
+    const unregisterTrash = () => { if (draftTrashActions.get(cacheKey) === trashDraft) draftTrashActions.delete(cacheKey); };
     const unregister = registerUpdateSave(async () => {
       try { await persist(); while (dirty.current) await persist(); if (!mounted) unregister(); }
       catch (error) { throw new Error(`Open “${current.current.title}” in its library, resolve any conflict, and save it before restarting. ${String(error)}`); }
     }, cacheKey);
     const prevent = (event: BeforeUnloadEvent) => { if (dirty.current && (!window.desktop || backupFailed.current)) { event.preventDefault(); event.returnValue = ''; } };
-    window.addEventListener('beforeunload', prevent); return () => { mounted = false; window.removeEventListener('beforeunload', prevent); void persist().then(unregister).catch(() => {}); };
+    window.addEventListener('beforeunload', prevent); return () => { mounted = false; window.removeEventListener('beforeunload', prevent); void persist().then(() => { unregister(); unregisterTrash(); }).catch(() => {}); };
   }, []);
   const wrap = (marker: string) => { const el = textarea.current; if (!el) return; const a = el.selectionStart, b = el.selectionEnd; update({ content: draft.content.slice(0, a) + marker + draft.content.slice(a, b) + marker + draft.content.slice(b) }); requestAnimationFrame(() => { el.focus(); el.setSelectionRange(a + marker.length, b + marker.length); }); };
   const download = () => { const blob = new Blob([draft.content], { type: 'text/plain;charset=utf-8' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${draft.title.replace(/[<>:"/\\|?*]/g, '_')}.txt`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
   const words = useMemo(() => tokenize(draft.content).length, [draft.content]);
+  const close = async () => {
+    if (closing) return;
+    setClosing(true);
+    try { await persist(); while (dirty.current) await persist(); onClose(); }
+    catch { /* Keep the editor and durable draft available when saving fails. */ }
+    finally { setClosing(false); }
+  };
   return <section ref={editor} className={`editor ${expanded ? 'editor-expanded' : ''}`} aria-label="Script editor">
-    <div className="editor-heading"><div className="eyebrow">SCRIPT EDITOR</div><span className={`save-state ${status.includes('failed') ? 'error-text' : ''}`}>{status}</span><button ref={expandButton} className="icon-button" aria-label={expanded ? 'Exit expanded editor' : 'Expand editor'} title={expanded ? 'Exit expanded editor · Esc' : 'Expand editor'} aria-pressed={expanded} onClick={() => setExpanded(v => !v)}>{expanded ? <Minimize2 size={18}/> : <Maximize2 size={18}/>}</button></div>
+    <div className="editor-heading"><div className="eyebrow">SCRIPT EDITOR</div><span className={`save-state ${status.includes('failed') ? 'error-text' : ''}`}>{status}</span><button ref={expandButton} className="icon-button" aria-label={expanded ? 'Exit expanded editor' : 'Expand editor'} title={expanded ? 'Exit expanded editor · Esc' : 'Expand editor'} aria-pressed={expanded} onClick={() => setExpanded(v => !v)}>{expanded ? <Minimize2 size={18}/> : <Maximize2 size={18}/>}</button><button className="icon-button" aria-label="Close editor" title="Close editor" disabled={closing} aria-busy={closing} onClick={() => void close()}><X size={18}/></button></div>
     <input className="title-input" aria-label="Script title" value={draft.title} onChange={e => update({ title: e.target.value })} maxLength={200}/>
     <div className="editor-meta"><span>{words} words</span><span>~ {formatTime(words / 130 * 60)} at 130 WPM</span><button className={`icon-button ${draft.favorite ? 'accent-text' : ''}`} aria-label="Favorite" aria-pressed={draft.favorite} onClick={() => update({ favorite: !draft.favorite })}><Star size={16} fill={draft.favorite ? 'currentColor' : 'none'}/></button></div>
     <div className="editor-toolbar">

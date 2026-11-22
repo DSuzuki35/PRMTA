@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { shortcutsSchema, defaultShortcuts } from './shortcuts';
 
 export const draftSchema = z.object({
   id: z.string().uuid(), title: z.string().trim().min(1).max(200),
@@ -51,7 +52,11 @@ export const preferencesSchema = z.object({
   cloudFolder: z.string().max(2000), whisperUrl: z.string().max(2000),
   voiceLatency: z.enum(['responsive', 'steady']).default('responsive'),
   whisperModel: z.enum(['tiny', 'base', 'small-q5', 'small', 'turbo-q5']).default('base'),
-  language: z.enum(['de', 'en', 'auto']), provider: z.enum(['whisper', 'browser', 'parakeet']),
+  language: z.enum(['de', 'en', 'auto']), provider: z.enum(['whisper', 'browser', 'parakeet', 'system']),
+  shortcuts: shortcutsSchema.default(defaultShortcuts),
+  keyboardKeepVoiceActive: z.boolean().default(true), keyboardScrollSpeed: z.number().min(20).max(400).default(130),
+  voiceCommandsEnabled: z.boolean().default(false),
+  voiceCommandWakeWord: z.string().trim().min(2).max(32).regex(/^[\p{L}][\p{L} '-]*$/u).default('prompta'),
   parakeetAcceleration: z.enum(['cpu', 'directml']).default('cpu'),
   microphoneId: z.string().max(500), countdown: z.number().int().min(0).max(15),
   loop: z.boolean(), speed: z.number().min(20).max(400),
@@ -76,6 +81,7 @@ export const defaultPreferences: Preferences = {
     vr: { ...defaultAppearance, fontSize: 48, transparent: true, width: 90 } },
   cloudFolder: '', whisperUrl: 'http://127.0.0.1:8080', language: 'en', provider: 'whisper', parakeetAcceleration: 'cpu',
   whisperModel: 'base', voiceLatency: 'responsive',
+  shortcuts: { ...defaultShortcuts }, keyboardKeepVoiceActive: true, keyboardScrollSpeed: 130, voiceCommandsEnabled: false, voiceCommandWakeWord: 'prompta',
   microphoneId: '', countdown: 3, loop: false, speed: 130,
   gamepadEnabled: false, previousButton: 4, nextButton: 5,
   previousParagraphButton: null, nextParagraphButton: null, previousSentenceButton: null, nextSentenceButton: null,
@@ -97,7 +103,7 @@ export const commandSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('reset') }), z.object({ type: z.literal('blackout') }),
   z.object({ type: z.literal('seek'), position: z.number().finite() }),
   z.object({ type: z.literal('step'), words: z.number().min(-1000).max(1000) }),
-  z.object({ type: z.literal('navigate'), unit: z.enum(['page', 'paragraph', 'sentence']), direction: z.union([z.literal(-1), z.literal(1)]), keepVoiceActive: z.boolean().optional() }),
+  z.object({ type: z.literal('navigate'), unit: z.enum(['page', 'paragraph', 'sentence', 'chapter']), direction: z.union([z.literal(-1), z.literal(1)]), keepVoiceActive: z.boolean().optional() }),
   z.object({ type: z.literal('scroll'), direction: z.union([z.literal(-1), z.literal(0), z.literal(1)]), speed: z.number().min(20).max(400), source: z.string().uuid(), sequence: z.number().int().nonnegative(), keepVoiceActive: z.boolean().optional() }),
   z.object({ type: z.literal('speed'), speed: z.number().min(20).max(400) }),
   z.object({ type: z.literal('mode'), mode: z.enum(['manual', 'timed', 'voice']) }),

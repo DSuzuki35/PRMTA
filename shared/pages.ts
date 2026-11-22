@@ -9,9 +9,23 @@ function sentenceEnds(content: string, words: Word[], i: number): boolean {
   const compound = (i > 0 && compoundAbbreviations.has(`${words[i - 1].normalized}:${words[i].normalized}`) && /^\.\s*$/.test(content.slice(words[i - 1].end, words[i].start))) || (!!words[i + 1] && compoundAbbreviations.has(`${words[i].normalized}:${words[i + 1].normalized}`) && /^\.\s*$/.test(gap));
   return /[!?…]/u.test(gap) || (/\./.test(gap) && !adjacentNumber && !abbreviations.has(words[i].normalized) && !compound && (!words[i + 1] || /\s/.test(gap)));
 }
-export function navigationStarts(content: string, unit: 'page' | 'paragraph' | 'sentence'): number[] {
+export function navigationStarts(content: string, unit: 'page' | 'paragraph' | 'sentence' | 'chapter'): number[] {
   if (unit === 'page') return pagesFor(content).map(page => page.start);
   const words = tokenize(content), starts: number[] = words.length ? [0] : [];
+  if (unit === 'chapter') {
+    // Keep the original token offsets: headings remain part of the spoken script.
+    const headings = [...content.matchAll(/^ {0,3}#{1,6}(?=[ \t\r\n]|$)[^\r\n]*/gm)];
+    if (headings.length) {
+      let word = 0;
+      for (const heading of headings) {
+        while (word < words.length && words[word].start < heading.index) word++;
+        if (word < words.length && starts.at(-1) !== word) starts.push(word);
+      }
+      return starts;
+    }
+    // Automatic sixty-word pages are presentation units, never chapters.
+    return /^\s*\\?---\s*$/m.test(content) ? pagesFor(content).map(page => page.start) : starts;
+  }
   for (let i = 1; i < words.length; i++) {
     const gap = content.slice(words[i - 1].end, words[i].start);
     const paragraph = words[i].paragraph !== words[i - 1].paragraph || /^\s*\\?---\s*$/m.test(gap);

@@ -25,15 +25,15 @@ test('assignments ignore stuck buttons, reject duplicates across actions, clear 
   const field = page.locator('.assignment-field').filter({ hasText: 'Next sentence' });
   await expect(field.locator('output')).toHaveText('Button 7');
   await buttons(page, [10, 5]); await page.waitForTimeout(80); await buttons(page, [10]);
-  await expect(page.locator('.assignment-status')).toContainText('already assigned to Next page');
+  await expect(page.locator('.settings-card').filter({ has: page.getByRole('heading', { name: 'Joystick / Gamepad', exact: true }) }).locator('.assignment-status')).toContainText('already assigned to Next page');
   await page.getByRole('button', { name: 'Clear next page button', exact: true }).click();
   await page.getByRole('button', { name: 'Assign next sentence button', exact: true }).click();
   await page.waitForTimeout(80); await buttons(page, [10, 5]); await page.waitForTimeout(80); await buttons(page, [10]);
   await expect(field.locator('output')).toHaveText('Button 5');
-  await page.getByRole('slider', { name: 'Held scroll speed (WPM)' }).press('End');
+  await page.getByRole('slider', { name: 'Held scroll speed (WPM)', exact: true }).press('End');
   await expect.poll(() => host.library.getSetting<any>('preferences', {}).gamepadScrollSpeed).toBe(400);
   await page.reload(); await expect(field.locator('output')).toHaveText('Button 5');
-  await expect(page.getByRole('slider', { name: 'Held scroll speed (WPM)' })).toHaveValue('400');
+  await expect(page.getByRole('slider', { name: 'Held scroll speed (WPM)', exact: true })).toHaveValue('400');
   await page.setViewportSize({ width: 800, height: 1000 });
   await page.locator('.gamepad-assignments').scrollIntoViewIfNeeded();
   await page.screenshot({ path: 'artifacts/controller-settings-v030.png', fullPage: true });

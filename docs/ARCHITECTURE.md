@@ -4,7 +4,7 @@
 
 | Location | Responsibility |
 | --- | --- |
-| `electron/` | Secure desktop shell, native displays/controllers, owned Whisper and Parakeet processes, verified downloads and application updates. |
+| `electron/` | Secure desktop shell, native displays/controllers, owned Whisper, Parakeet and system speech processes, verified downloads and application updates. |
 | `server/host.ts` | Loopback HTTP API, optional LAN listener, authentication and websocket distribution. |
 | `server/library.ts` | Local SQLite revision index, immutable TXT history and legacy revision validation. |
 | `server/cloud-library.ts` | Current cloud TXT files, metadata, bidirectional reconciliation and backed-up legacy migration. |
@@ -21,8 +21,10 @@ flowchart LR
   Capture --> Proxy[Loopback speech proxy]
   Proxy --> Whisper[whisper.cpp]
   Proxy --> Parakeet[Local Parakeet worker]
+  Proxy --> Native[Windows / Apple speech worker]
   Whisper --> Align[Fuzzy script alignment]
   Parakeet --> Align
+  Native --> Align
   Align --> Session[Authoritative session]
   Studio[Studio controls] --> Session
   Controller[Native SDL controller service] --> Session
@@ -35,7 +37,21 @@ flowchart LR
 
 Voice highlighting has a separate server-side `VoicePacing` estimate in `shared/voice-pacing.ts`. Local audio capture sends compact, admin-only `voiceActivity` heartbeats tied to the transport revision. The existing 100 ms session tick publishes `voiceHighlight`; it never feeds back into `position` or the matcher. Clients clamp it to the current page and can disable it per profile. Recognition consumes correctly predicted progress and resets wrong or stalled guesses; audio freshness and match expiry bound prediction. Only confirmed positions dim read text and drive scrolling/pagination.
 
-## Native controllers and voice continuity
+## Keyboard and voice controls
+
+`shared/shortcuts.ts` defines validated, unique keyboard bindings and release-based assignment. `useKeyboardControls` routes focused-window actions through `controlCommand`, cancels holds on blur, modifiers, dialogs and settings, and supplies a separate scroll heartbeat source. Keyboard and controller voice-continuity preferences are independent. Native output windows keep their fixed Escape-to-close behavior.
+
+`shared/voice-commands.ts` parses only complete, leading wake phrases. `src/speech.ts` separates commands from script transcripts: browser commands wait for final recognition; local commands wait for a quiet audio boundary. Utterance IDs, transport revisions and microphone-generation checks prevent stale hypotheses from replaying a command after navigation. Local recognition keeps listening while paused only when commands are enabled and the control context is eligible. A single gate survives navigation and pause; it resets when microphone or wake-phrase configuration changes.
+
+## Native system speech
+
+`electron/system-speech.ts` owns a persistent private-pipe worker and a short-lived status probe. Windows runs `scripts/system-speech-windows.ps1` using Windows PowerShell and System.Speech; macOS packages a per-architecture Swift helper using Speech and AVFoundation. Status probes inventory languages without requesting authorization. Explicit setup or first microphone use initializes recognition; the Apple path requires on-device support and disallows network fallback.
+
+Audio is validated mono PCM16 WAV at 16 kHz, bounded to 25 seconds, passed in memory and never recorded to a temporary audio file. Request IDs, bounded replies, one in-flight transcription and startup/request timeouts protect worker lifecycle. Closing the app stops only its owned helpers. All native setup, status and transcription endpoints require loopback admin access. New Mac profiles default to system speech; existing saved preferences are preserved.
+
+Mac package configuration and a manual two-architecture workflow live in `build/electron-builder.mac.cjs` and `.github/workflows/macos.yml`. They exclude Windows model/controller runtimes, compile and sign the Swift helper, and produce DMG/ZIP artifacts. See [Mac build and signing](MACOS.md) before distribution.
+
+## Controller input
 
 `electron/controller-service.ts` polls in the main process every 25 ms. `electron/controller-sdl.ts` loads @kmamal/sdl 0.11.13 and SDL 2.32.8 with `SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1` before initialization. Recognized gamepads use standard browser-compatible button ordering, including shoulders 4/5; generic devices retain up to 128 raw buttons. `controllerState` supplies the same snapshots to assignment capture, avoiding separate browser/native numbering during setup.
 
@@ -112,6 +128,8 @@ Additional checks:
 node scripts/electron-smoke.mjs
 npx tsx scripts/visual-check.ts
 node scripts/documentation-screenshots.mjs
+# With the local public JFK fixture described in the voice verification notes:
+node scripts/system-speech-runtime-smoke.mjs
 # With an independently running local server and the documented JFK fixture:
 npx tsx scripts/voice-smoke.ts
 ```

@@ -1,4 +1,4 @@
-import { _electron as electron } from '@playwright/test';
+import { _electron as electron, expect } from '@playwright/test';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -24,7 +24,16 @@ try {
   await page.getByLabel('Text flow').selectOption('scroll');
   await page.getByRole('button', { name: 'Library', exact: true }).click();
   await page.getByRole('button', { name: /Your words. Your pace./ }).first().click();
+  await page.waitForTimeout(300);
   await page.screenshot({ path: 'docs/images/library.png' });
+  await page.getByRole('button', { name: 'List view', exact: true }).click();
+  await page.getByRole('button', { name: 'Close editor', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Script editor', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'List view', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: 'docs/images/library-list.png' });
+  await page.getByRole('button', { name: /Your words. Your pace./ }).first().click();
+  await page.getByRole('button', { name: 'Grid view', exact: true }).click();
   await page.getByRole('button', { name: 'Expand editor', exact: true }).click();
   await page.screenshot({ path: 'docs/images/editor-expanded.png' });
   await page.keyboard.press('Escape');
@@ -38,11 +47,21 @@ try {
   await page.screenshot({ path: 'docs/images/models.png', mask: [page.locator('.storage-note code')], maskColor: '#25262c' });
   await page.locator('.settings-card').filter({ has: page.getByRole('heading', { name: 'Joystick / Gamepad', exact: true }) }).screenshot({ path: 'docs/images/controllers.png' });
   await page.locator('.settings-card').filter({ has: page.getByRole('heading', { name: 'App updates', exact: true }) }).screenshot({ path: 'docs/images/updates.png' });
+  // Fit this long panel in the viewport so the sticky header cannot cover the
+  // upper controls while Playwright captures the full element.
+  await page.setViewportSize({ width: 1600, height: 2600 });
+  await page.locator('.settings-card').filter({ has: page.getByRole('heading', { name: 'Keyboard shortcuts', exact: true }) }).screenshot({ path: 'docs/images/keyboard-shortcuts.png' });
+  await page.setViewportSize({ width: 1600, height: 1050 });
+  await page.locator('.settings-card').filter({ has: page.getByRole('heading', { name: 'Voice commands', exact: true }) }).screenshot({ path: 'docs/images/voice-commands.png' });
+  await page.getByRole('combobox', { name: 'Speech recognition', exact: true }).selectOption('system');
+  await page.getByRole('button', { name: 'Prepare system speech', exact: true }).waitFor();
+  await page.getByText('Windows System.Speech', { exact: true }).waitFor();
+  await page.locator('.settings-card').filter({ has: page.getByRole('heading', { name: 'Voice follow', exact: true }) }).screenshot({ path: 'docs/images/system-speech.png' });
   await page.getByRole('combobox', { name: 'Speech recognition', exact: true }).selectOption('parakeet');
   await page.getByRole('button', { name: 'Set up Parakeet', exact: true }).waitFor();
   await page.locator('.settings-card').filter({ has: page.getByRole('heading', { name: 'Voice follow', exact: true }) }).screenshot({ path: 'docs/images/parakeet.png' });
   await page.getByLabel('Cloud library folder', { exact: true }).fill(join(dir, 'cloud'));
   await page.getByRole('button', { name: 'Open cloud library', exact: true }).click();
   await page.getByRole('dialog').screenshot({ path: 'docs/images/cloud-switch.png', mask: [page.locator('.folder-path')], maskColor: '#25262c' });
-  console.log('Created English screenshots including controller assignments, updates, expanded editor and cloud switch confirmation.');
+  console.log('Created English screenshots including library views, keyboard/voice controls, native speech, controller assignments and updates.');
 } finally { await app.close(); rmSync(dir, { recursive: true, force: true }); }

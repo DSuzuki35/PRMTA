@@ -36,6 +36,10 @@ Use **Expand editor** at the top right of the editor to fill the PRMTA window. *
 
 Use folders, comma-separated tags, favorites and search to organize scripts. Production notes do not appear in the output. Trash is reversible. **History** shows previous revisions. Restoring a revision creates a new version; it does not erase the old versions. Duplicate a script to create an independent copy.
 
+Switch between **Grid view** and **List view** in the library toolbar. Delete a script directly from its overview entry or from the editor; deletion moves it to local Trash and removes its current TXT from an active cloud folder. Use **Close editor** to return to the full-width overview. Closing saves pending edits first; a failed save keeps the editor open so you can recover the text.
+
+![Library list view with the editor closed](images/library-list.png)
+
 ![Script library and editor](images/library.png)
 
 An active take uses a snapshot of the loaded script. Editing the library does not change words on air. Load the script again when you want those edits to appear.
@@ -54,7 +58,7 @@ Draft backups belong to the studio URL's origin. If port 4317 is occupied and PR
 
 There are three independent appearance profiles: **Studio preview**, **External display / browser**, and **VR / OpenKneeboard**. Select the profile in the inspector to edit its font size, line height, text width, reading line, alignment, colors, highlighting, dimming, mirroring and background opacity (0–100%). Background opacity does not fade the text. Transparent browser/OBS/VR output is supported; native monitor windows retain an opaque Windows surface.
 
-**Smooth voice highlighting** under **Reading area** uses local microphone activity and your recent speaking pace to preview up to two words between recognition results. Recognition corrects the estimate; silence stops its advance. The option is independent for each profile and does not change the confirmed position, mark guesses as read or turn a page early. It requires **Highlight current word** and local Whisper or Parakeet.
+**Smooth voice highlighting** under **Reading area** uses local microphone activity and your recent speaking pace to preview up to two words between recognition results. Recognition corrects the estimate; silence stops its advance. The option is independent for each profile and does not change the confirmed position, mark guesses as read or turn a page early. It requires **Highlight current word** and local Whisper, Parakeet or system speech.
 
 **Continuous at reading line** keeps the current word near the chosen vertical guide. Set the reading line to 50% for the middle. **Page by page** keeps the current page visible and changes pages as voice or timed playback progresses. Current-word highlighting works in either mode. In page mode, enable **Preview next line** to see the first line of the next page in muted gray below the current page. It is included in the fit calculation and disappears on the last page. **Smooth line transitions** in continuous mode animates line changes during playback; switch it off for immediate positioning. Loading a script always pauses at its first word, including the visible scroll position.
 
@@ -114,14 +118,42 @@ Links contain bearer access tokens: anyone with a remote link on the enabled net
 | --- | --- |
 | Space | Play / pause |
 | Page Up / Page Down | Previous / next page |
-| Left / Right | Back / forward five words |
+| Left / Right | Previous / next word |
+| Ctrl + Left / Right | Previous / next sentence |
+| Ctrl + Up / Down | Previous / next paragraph |
+| Shift + Page Up / Page Down | Previous / next chapter |
+| Shift + Up / Down | Hold to scroll up / down |
 | Up / Down | Increase / decrease WPM by five |
 | Home | Reset |
 | B | Toggle blackout |
 | F | Fullscreen |
 | Escape | Pause in the studio; close a native display output |
 
-Shortcuts work while the studio or remote has focus and you are not typing in a field. They are not system-wide shortcuts. Keyboard presenters and foot pedals can send these keys.
+These are the studio defaults. In **Settings > Keyboard shortcuts**, choose **Assign shortcut**, then press and release the desired key combination. Clear an existing assignment before reusing it for another action. **Reset keyboard shortcuts** restores the defaults. Play, loop, microphone and reading-mode actions are also available for assignment. Key names refer to physical US keyboard positions; operating-system shortcuts may be intercepted before PRMTA receives them.
+
+Shortcuts work while the studio has focus, outside typing fields, Settings, assignment sessions and dialogs. They are not system-wide shortcuts. Keyboard presenters and foot pedals can send these keys. The phone remote retains its basic fixed controls independently of studio assignments.
+
+**Keyboard held scroll speed (WPM)** controls smooth held scrolling independently of playback and controller speeds. **Keep voice follow active after keyboard navigation** preserves an already-playing Voice take. Release the scroll key to resume following at the new position; paused takes stay paused. Releasing a modifier, losing focus or opening a dialog stops a held scroll.
+
+Chapter navigation uses Markdown heading lines (`# Chapter`, `## Section`, up to six `#` characters). Without headings, explicit `---` page separators define chapters. Automatically fitted pages do not become chapters.
+
+![Configurable keyboard shortcuts](images/keyboard-shortcuts.png)
+
+## Voice commands
+
+Enable **Settings > Voice commands > Enable voice commands**. The default wake phrase is **prompta**; you can edit it and click **Apply wake phrase**. Turn on the microphone in the studio. Commands work while playback is paused, so “prompta, play” can resume a take. Turning off the microphone stops command listening too.
+
+Pause briefly before and after a command. For example, say **“prompta, next sentence”**, **“prompta, previous paragraph”**, **“prompta, next chapter”**, **“prompta, pause”** or **“prompta, faster”**. Plain **next** and **previous** mean pages. Recognition must finish the command before navigation happens; rolling recognizer results do not repeat the action. The studio displays the recognized action above the preview.
+
+Commands are suspended in Settings, while editing text, in dialogs and during button/shortcut assignment. They must be a complete addressed phrase, not a mention within prose. Change the wake phrase if your script starts sentences with it. Accuracy depends on the speech engine; commands are not a separate always-on wake-word service. See the [full voice guide](VOICE.md#voice-commands).
+
+![Voice command settings](images/voice-commands.png)
+
+## Windows and Apple system speech
+
+Choose **Settings > Voice follow > Speech recognition > Windows / Apple · system speech**. The panel lists installed languages without starting microphone capture. Click **Prepare system speech**, then enable the microphone in the studio. Windows uses its installed System.Speech recognizer; the experimental Mac build requires Apple's on-device speech support and permission. English is the default. Install the desired speech language in your operating system if it is missing; a missing requested language produces an error instead of silently using a different one.
+
+System speech uses the same nearby alignment and waveform highlighting as the other local engines. It can be fast, but recognition accuracy varies. Turn the microphone off before changing engine or language and reconnect afterward. See [Mac preparation](MACOS.md) for platform limitations.
 
 For controllers, enable **Enable controller buttons** in **Settings → Joystick / Gamepad** and connect the device. The Windows app reads controllers natively, including generic joysticks and HOTAS devices. In a browser-only studio, press a button once so the browser can expose it. Eight actions can be assigned:
 
