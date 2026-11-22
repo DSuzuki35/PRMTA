@@ -34,6 +34,10 @@ jobs:
       - run: npm test
       - run: npm run test:e2e
       - name: Package native architecture (compiles Swift helper before packaging)
+        env:
+          # This workflow uses identity '-' with no signing secrets. Electron
+          # Builder otherwise skips even ad-hoc signing for pull requests.
+          CSC_FOR_PULL_REQUEST: 'true'
         run: npx electron-builder --config build/electron-builder.mac.cjs --mac --${{ matrix.arch }} --publish never
       - name: Verify packaged helper and app signature
         shell: bash
