@@ -2,7 +2,7 @@
 
 **Your words. Your pace.** A local-first teleprompter studio for Windows, external displays, browsers and VR.
 
-[Download Windows Setup](https://github.com/DSuzuki35/PRMTA/releases/latest) · [User guide](docs/USER-GUIDE.md) · [Voice & models](docs/VOICE.md) · [macOS test builds](docs/MACOS.md) · [Development](docs/ARCHITECTURE.md)
+[Download Windows Setup](https://github.com/DSuzuki35/PRMTA/releases/latest) · [Download macOS test build](https://github.com/DSuzuki35/PRMTA/releases/tag/v0.4.1) · [User guide](docs/USER-GUIDE.md) · [Voice & models](docs/VOICE.md) · [Development](docs/ARCHITECTURE.md)
 
 ![PRMTA studio](docs/images/studio.png)
 
@@ -31,8 +31,10 @@ Both Windows x64 downloads include the local CPU speech engine and Base model. T
 
 | Download | Choose this when |
 | --- | --- |
-| **PRMTA-Setup-0.4.1-x64.exe** | Recommended: install PRMTA, create shortcuts and receive automatic updates. |
-| **PRMTA-Portable-0.4.1-x64.exe** | Run without installation and download updates manually. |
+| **PRMTA-Setup-0.4.0-x64.exe** | Recommended: install PRMTA, create shortcuts and receive automatic updates. |
+| **PRMTA-Portable-0.4.0-x64.exe** | Run without installation and download updates manually. |
+
+Windows stays on stable **0.4.0**. The **0.4.1 macOS prerelease** is available as a DMG for [Apple Silicon](https://github.com/DSuzuki35/PRMTA/releases/download/v0.4.1/PRMTA-0.4.1-macOS-arm64.dmg) or [Intel](https://github.com/DSuzuki35/PRMTA/releases/download/v0.4.1/PRMTA-0.4.1-macOS-x64.dmg). Open the DMG and drag PRMTA into Applications.
 
 macOS 13+ test builds support Apple Silicon and Intel, with Apple on-device speech or a separately installed local Whisper server. Mac packages use manual updates and are ad-hoc signed, not notarized. See the [Mac build and testing guide](docs/MACOS.md) for installation and remaining microphone/permission acceptance checks.
 
