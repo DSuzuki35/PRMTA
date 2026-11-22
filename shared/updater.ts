@@ -1,4 +1,4 @@
-export type UpdateMode = 'installed' | 'portable' | 'development' | 'unsupported';
+export type UpdateMode = 'installed' | 'portable' | 'development' | 'unsupported' | 'macos-manual';
 export type UpdateStatus = {
   mode: UpdateMode;
   phase: 'unavailable' | 'idle' | 'checking' | 'current' | 'downloading' | 'ready' | 'installing' | 'error';

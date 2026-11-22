@@ -1,6 +1,6 @@
 {
   "name": "prmta",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Local-first teleprompter studio for displays, browsers and VR",
   "private": true,
   "type": "module",

@@ -1,6 +1,6 @@
 # Contributing
 
-PRMTA is currently public source without a blanket open-source license. Discuss proposed contributions with the maintainer before submitting substantial work.
+PRMTA is licensed under MIT. Third-party components and model weights retain their own licenses. Discuss substantial contributions with the maintainer.
 
 Use Node.js 24 and the setup instructions in docs/ARCHITECTURE.md. Keep user-facing text and documentation in English, while preserving multilingual script content. Follow the Dan Suzuki UI Kit tokens in src/theme.css. Keep the output profiles independent and preserve compatibility with existing TXT/JSON revisions.
 

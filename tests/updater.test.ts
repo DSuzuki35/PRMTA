@@ -30,8 +30,19 @@ describe('desktop updates', () => {
     expect(updateMode(false, 'win32', false, true)).toBe('development');
     expect(updateMode(true, 'win32', true, true)).toBe('portable');
     expect(updateMode(true, 'win32', false, false)).toBe('unsupported');
-    expect(updateMode(true, 'darwin', false, true)).toBe('unsupported');
+    expect(updateMode(true, 'darwin', false, true)).toBe('macos-manual');
     expect(updateMode(true, 'win32', false, true)).toBe('installed');
+  });
+  it('keeps Mac test builds on manual Mac downloads without checking or installing updates', async () => {
+    const updater = new Updater();
+    const service = new UpdateService(updater, updateMode(true, 'darwin', false, false), '0.4.1', () => {}, async () => true);
+    service.start(); await service.check();
+    expect(service.status.message).toMatch(/macOS.*DMG/i);
+    expect(service.status.message).not.toMatch(/Windows|Setup/);
+    await expect(service.install()).rejects.toThrow();
+    expect(updater.checkForUpdates).not.toHaveBeenCalled();
+    expect(updater.quitAndInstall).not.toHaveBeenCalled();
+    service.stop();
   });
   it('downloads automatically but only installs on explicit request after safe shutdown', async () => {
     const updater = new Updater(); const prepare = vi.fn(async () => true);

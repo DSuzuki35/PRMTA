@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Preferences } from '../shared/model';
-import { defaultShortcuts, formatShortcut, reservedShortcut, shortcutActions, ShortcutCapture, shortcutsSchema, type ShortcutAction } from '../shared/shortcuts';
+import { shortcutsForPlatform, formatShortcut, reservedShortcut, shortcutActions, ShortcutCapture, shortcutsSchema, type ShortcutAction } from '../shared/shortcuts';
 import { Range, Toggle } from './AppearancePanel';
 import './KeyboardShortcuts.css';
 
@@ -57,14 +57,14 @@ export function KeyboardShortcuts({ preferences, onChange }: { preferences: Pref
 
   return <div className="keyboard-shortcuts" data-assigning={!!assigning}>
     <p className="muted">Shortcuts work while PRMTA is focused. Typing, Settings and open dialogs suspend playback shortcuts.</p>
-    <p className="muted">Win / Cmd shortcuts depend on your operating system. Some combinations may be handled by the system before PRMTA receives them.</p>
+    <p className="muted">{window.desktop?.platform === 'darwin' ? 'Mac defaults use Cmd + arrows for sentences and paragraphs to avoid Mission Control. On compact keyboards, Fn + Up/Down is Page Up/Down and Fn + Left is Home. Reset below to adopt the Mac defaults; existing assignments are kept.' : 'Win / Cmd shortcuts depend on your operating system. Some combinations may be handled by the system before PRMTA receives them.'}</p>
     <Toggle label="Keep voice follow active after keyboard navigation" checked={preferences.keyboardKeepVoiceActive} onChange={keyboardKeepVoiceActive => onChange({ ...preferences, keyboardKeepVoiceActive })}/>
     <p className="muted">Hold a scroll shortcut to move smoothly; release to stop. Voice following resumes on release when enabled. Paused takes stay paused.</p>
     <Range label="Keyboard held scroll speed (WPM)" min={20} max={400} step={10} value={preferences.keyboardScrollSpeed} suffix=" words per minute" onChange={keyboardScrollSpeed => onChange({ ...preferences, keyboardScrollSpeed })}/>
     <div className="keyboard-shortcut-instructions">
       <p className="muted" id="keyboard-capture-help">Choose Assign shortcut, then press and release a key combination. Esc cancels. Key names use physical positions on a US keyboard.</p>
       <button type="button" className="button secondary" disabled={!!assigning} onClick={() => {
-        onChange({ ...preferences, shortcuts: { ...defaultShortcuts } });
+        onChange({ ...preferences, shortcuts: shortcutsForPlatform(window.desktop?.platform) });
         setStatus('Default keyboard shortcuts restored.');
       }}>Reset keyboard shortcuts</button>
     </div>
