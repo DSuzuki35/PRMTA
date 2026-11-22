@@ -9,6 +9,7 @@
 - Added local Windows System.Speech recognition using installed speech languages. English is the default; existing language choices are retained.
 - Prepared macOS 13+ Apple Silicon/Intel builds with on-device Apple speech, permission descriptions, signing configuration and a manual build workflow. Real Mac permission/microphone testing remains required.
 - Added grid/list library views, overview delete buttons and a close button for the script editor with draft-save safeguards.
+- Fixed cloud TXT preservation when changing only title capitalization on case-insensitive macOS volumes, using filesystem identity instead of operating-system assumptions.
 - Provided both Windows Setup with automatic updates and the portable executable; updated English guides and screenshots.
 
 ## 0.3.1 - Background controllers and optional Parakeet

@@ -25,6 +25,7 @@ module.exports = {
     buildMacOSSpeech(arch);
   },
   mac: {
+    icon: 'build/icon-mac.png',
     target: ['dmg', 'zip'],
     artifactName: 'PRMTA-${version}-macOS-${arch}.${ext}',
     category: 'public.app-category.productivity',
