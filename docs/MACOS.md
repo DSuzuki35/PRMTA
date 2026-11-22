@@ -1,8 +1,16 @@
 # PRMTA on macOS
 
-The macOS build is experimental. Apple Silicon and Intel DMG/ZIP packages have been built in CI, including Swift compilation, helper architecture, ad-hoc signature validation, permission descriptions and native language inventory. Permission dialogs, microphone behavior, recognition accuracy and interactive packaged app launch still need verification on a real Mac. See the [macOS build workflow](https://github.com/DSuzuki35/PRMTA/actions/workflows/macos.yml) for temporary experimental artifacts. Successful CI packaging does not verify microphone behavior.
+The macOS build is experimental. Apple Silicon and Intel DMG/ZIP packages have been built in CI, including Swift compilation, helper architecture, ad-hoc signature validation, permission descriptions and native language inventory. Permission dialogs, microphone behavior and recognition accuracy still need verification with a real microphone. The packaged launch/settings/quit check uses synthetic audio and does not exercise microphone or speech-authorization prompts. See the [macOS build workflow](https://github.com/DSuzuki35/PRMTA/actions/workflows/macos.yml) for temporary experimental artifacts. Successful CI packaging does not verify microphone behavior.
 
 PRMTA's Electron 45 application requires **macOS 13 Ventura or later**, on Apple silicon (`arm64`) or Intel (`x64`). The speech helper itself targets macOS 12, but that does not lower the application's requirement. [Electron 44 removed macOS 12 support](https://www.electronjs.org/blog/electron-44-0).
+
+## 0.4.1 installation and updates
+
+Choose `PRMTA-0.4.1-macOS-arm64.dmg` for an M-series Mac or `PRMTA-0.4.1-macOS-x64.dmg` for Intel. Open the DMG and copy PRMTA to Applications. For an update, quit the running app before replacing it; the application profile, scripts and saved preferences remain outside the bundle. Do not run directly from the mounted DMG. These test builds have no automatic update feed. Gatekeeper restrictions still apply because they are not Developer ID signed or notarized; local source builds are an alternative for testing.
+
+## External Whisper on Mac
+
+Apple on-device speech remains the default. To use a separately installed whisper.cpp server (including one configured for GPU acceleration), select **Whisper · external local server**, enter its loopback address and port, apply, and check the connection. `127.0.0.1`, `localhost` and `[::1]` are accepted. The server must implement `/health` and `/inference` as described in [VOICE.md](VOICE.md). Start and manage that server separately; PRMTA never downloads its models or starts a Windows executable on a Mac. The server selects the model and acceleration. Windows-only Parakeet setup is disabled on Mac, and existing saved engine selections are not silently replaced.
 
 ## Build and launch on your MacBook
 
@@ -42,7 +50,7 @@ Use just `--arm64` or `--x64` to build one architecture. Each packaging pass com
 
 By default packages are **ad-hoc signed, not Developer ID signed or notarized**. They are development artifacts and may be blocked by Gatekeeper on another Mac. Build from source locally for testing, or use a properly signed and notarized distribution. Do not disable system security globally. Hardened Runtime is disabled for these ad-hoc application builds to avoid Electron framework library-validation failures.
 
-The manual GitHub Actions workflow **macOS experimental packages** builds each architecture on a matching runner: `macos-15` for arm64 and `macos-15-intel` for x64. It uploads temporary workflow artifacts and does not publish a GitHub release. It has read-only repository permissions and no signing secrets. These labels follow [GitHub's runner inventory](https://github.com/actions/runner-images#available-images); macOS 14 runners were retired in November 2026.
+The GitHub Actions workflow **macOS experimental packages** builds each architecture on a matching runner: `macos-15` for arm64 and `macos-15-intel` for x64. It runs on pull requests, pushes to main, and manual dispatch. It runs the unit/UI suites and launches the packaged app with an isolated profile and a synthetic external Whisper server before uploading temporary artifacts. It does not publish a GitHub release. It has read-only repository permissions and no signing secrets. These labels follow [GitHub's runner inventory](https://github.com/actions/runner-images#available-images); macOS 14 runners were retired in November 2026.
 
 ## Developer ID signing and notarization
 
@@ -66,7 +74,7 @@ If notarization credentials are missing or notarization was skipped, do not desc
 
 ## Real-Mac acceptance checklist
 
-The shared defaults use Ctrl + arrow keys for sentence and paragraph navigation. macOS Mission Control may intercept these combinations. Reassign them in **Settings > Keyboard shortcuts** to keys that are free on your Mac; PRMTA shortcuts require the app to be focused.
+New Mac profiles use Cmd + arrow keys for sentence and paragraph navigation, avoiding the Ctrl + arrow combinations used by Mission Control. Existing assignments are preserved; choose **Settings > Keyboard shortcuts > Reset keyboard shortcuts** to adopt the Mac defaults. On compact Mac keyboards, Fn + Up/Down is Page Up/Down and Fn + Left is Home. Shortcuts require PRMTA focus and are suspended while editing text or using Settings.
 
 - Build and launch the native architecture; verify the helper is executable and the packaged app opens from Applications.
 - Open Settings before connecting audio: no Speech Recognition permission prompt should appear just for status.
@@ -77,3 +85,13 @@ The shared defaults use Ctrl + arrow keys for sentence and paragraph navigation.
 - Disconnect/reconnect repeatedly, change language while idle, close the window/app during recognition, and check for orphaned `prmta-speech` processes.
 - Check multiple displays, fullscreen output, foreground controller input, keyboard shortcuts, and remote browser output.
 - Repeat launch, permissions, offline recognition, and signature checks on a separate Mac for each distributed architecture.
+
+## Packaged speech fixture check
+
+For native recognition acceptance on a development Mac, place the public whisper.cpp JFK sample at `.tools/parakeet-proof/jfk-11.wav`, then run:
+
+```sh
+node scripts/macos-speech-runtime-smoke.mjs release-macos/mac-arm64/PRMTA.app
+```
+
+This uses Launch Services, an isolated profile, and prerecorded public audio. It never requests microphone capture. macOS may ask for Speech Recognition permission. The test requires a meaningful fixture transcript, checks repeated recognition and recovery from unavailable German support, and closes the app afterward. Generic IDE/direct-executable test launches can make the IDE responsible for privacy access and cause TCC to abort the helper even though PRMTA has the correct usage descriptions. Use the Launch Services check for permission-sensitive Mac testing; `macos-runtime-smoke.mjs` remains the permission-free CI startup check.

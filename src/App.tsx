@@ -30,6 +30,7 @@ export function App() {
   const [notice, setNotice] = useState(''), [help, setHelp] = useState(false), [mic, setMic] = useState(false), [micStarting, setMicStarting] = useState(false), [speechStatus, setSpeechStatus] = useState('Microphone off'), [level, setLevel] = useState(0);
   const stopSpeech = useRef<(() => void) | null>(null), micGeneration = useRef(0), upload = useRef<HTMLInputElement>(null);
   const [preferences, setPreferences] = useState(defaultPreferences); const prefRef = useRef(defaultPreferences), prefTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined), prefPending = useRef(false);
+  const prefRevision = useRef(0), prefWrites = useRef(Promise.resolve());
   const report = useCallback((message: string) => setNotice(message.replace(/^Error: /, '')), []);
   const refresh = useCallback(() => { if (route === 'studio') void api<Script[]>('/scripts').then(setScripts).catch(e => report(String(e))); }, [route, report]);
   const live = useSession(refresh); const { session, connected } = live;
@@ -43,8 +44,18 @@ export function App() {
   const captureEpoch = useRef(0);
   const send = useCallback((c: Command) => { if (['seek', 'step', 'reset', 'pause', 'mode', 'navigate', 'scroll'].includes(c.type)) captureEpoch.current++; void command(c).catch(e => { if (c.type !== 'voiceActivity' && c.type !== 'scroll') report(String(e)); }); }, [report]);
   const updatePreferences = (value: Preferences) => {
+    const revision = ++prefRevision.current;
     setPreferences(value); prefRef.current = value; prefPending.current = true; clearTimeout(prefTimer.current);
-    prefTimer.current = setTimeout(() => { void api<Preferences>('/preferences', prefRef.current).then(() => { prefPending.current = false; }).catch(e => { prefPending.current = false; report(String(e)); }); }, 180);
+    prefTimer.current = setTimeout(() => {
+      // Serialize saves so an older request cannot land after a newer edit.
+      // Its acknowledgement must not unlock incoming state for a pending edit.
+      prefWrites.current = prefWrites.current.then(async () => {
+        if (revision !== prefRevision.current) return;
+        try { await api<Preferences>('/preferences', value); }
+        catch (error) { if (revision === prefRevision.current) report(String(error)); }
+        finally { if (revision === prefRevision.current) prefPending.current = false; }
+      });
+    }, 180);
   };
   const seek = useCallback((position: number) => send({ type: 'seek', position }), [send]);
   const remoteAppearance = useMemo(() => ({ ...defaultPreferences.profiles.studio, fontSize: 28 }), []);

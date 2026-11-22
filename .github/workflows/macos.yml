@@ -1,6 +1,9 @@
 name: macOS experimental packages
 on:
   workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main]
 permissions:
   contents: read
 jobs:
@@ -26,8 +29,10 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npx playwright install chromium
       - run: npm run build
       - run: npm test
+      - run: npm run test:e2e
       - name: Package native architecture (compiles Swift helper before packaging)
         run: npx electron-builder --config build/electron-builder.mac.cjs --mac --${{ matrix.arch }} --publish never
       - name: Verify packaged helper and app signature
@@ -43,6 +48,12 @@ jobs:
           plutil -extract NSMicrophoneUsageDescription raw "$app_path/Contents/Info.plist"
           plutil -extract NSSpeechRecognitionUsageDescription raw "$app_path/Contents/Info.plist"
           node -e 'const {execFileSync}=require("node:child_process"); const result=JSON.parse(execFileSync(process.argv[1],["--status"],{encoding:"utf8",timeout:20000})); if(result.type!=="ready"||!Array.isArray(result.languages))throw new Error("Native speech inventory failed"); console.log(result);' "$helper_path"
+      - name: Launch packaged app with isolated profile and synthetic Whisper
+        shell: bash
+        run: |
+          set -euo pipefail
+          app_path=$(find release-macos -maxdepth 3 -name PRMTA.app -type d -print -quit)
+          node scripts/macos-runtime-smoke.mjs "$app_path"
       - uses: actions/upload-artifact@v4
         with:
           name: PRMTA-macOS-${{ matrix.arch }}-experimental

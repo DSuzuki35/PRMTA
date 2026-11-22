@@ -12,6 +12,7 @@ import { createSdlControllerSampler } from './controller-sdl';
 import type { ControllerContext, ControllerState } from '../shared/controller';
 import { ParakeetService } from './parakeet';
 import { SystemSpeechService } from './system-speech';
+import { shortcutsForPlatform } from '../shared/shortcuts';
 import type { ParakeetAcceleration } from '../shared/parakeet';
 
 let main: BrowserWindow | null = null; let host: Host; const outputs = new Map<number, BrowserWindow>();
@@ -43,7 +44,7 @@ else {
     whisper = new WhisperService(whisperRoot, id => models.path(id));
     parakeet = new ParakeetService(app.getPath('userData'), app.isPackaged ? join(process.resourcesPath, 'parakeet') : join(__dirname, '../scripts'));
     systemSpeech = new SystemSpeechService(app.isPackaged ? join(process.resourcesPath, 'system-speech') : join(__dirname, '../scripts'));
-    const hostOptions = { dataDir, systemSpeech, defaultProvider: process.platform === 'darwin' ? 'system' as const : 'whisper' as const, staticDir: join(__dirname, '../dist'), canControl: () => !installing, ensureSpeech: (url: string, model: string) => whisper.ensure(url, model), models: { list: () => ({ managed: true, models: models.list(), activeModel: whisper.activeModel }), install: (id: string) => models.install(id) }, parakeet: { status: () => parakeet.status(), install: () => parakeet.install(), ensure: (acceleration?: ParakeetAcceleration) => parakeet.ensure(acceleration), transcribe: (wav: Buffer) => parakeet.transcribe(wav), cancelInstall: () => parakeet.cancelInstall() } };
+    const hostOptions = { dataDir, systemSpeech, defaultShortcuts: shortcutsForPlatform(process.platform), defaultProvider: process.platform === 'darwin' ? 'system' as const : 'whisper' as const, staticDir: join(__dirname, '../dist'), canControl: () => !installing, ensureSpeech: (url: string, model: string) => whisper.ensure(url, model), models: whisper.managed ? { list: () => ({ managed: true, models: models.list(), activeModel: whisper.activeModel }), install: (id: string) => models.install(id) } : undefined, parakeet: { status: () => parakeet.status(), install: () => parakeet.install(), ensure: (acceleration?: ParakeetAcceleration) => parakeet.ensure(acceleration), transcribe: (wav: Buffer) => parakeet.transcribe(wav), cancelInstall: () => parakeet.cancelInstall() } };
     try { host = await createHost({ ...hostOptions, port: 4317 }); }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EADDRINUSE') throw error; host = await createHost({ ...hostOptions, port: 0 }); }
     const safeWindow = (win: BrowserWindow) => {

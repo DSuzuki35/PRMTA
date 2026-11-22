@@ -5,11 +5,13 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
+import { assertSpeechFixture } from '../tests/helpers/speech-fixture.ts';
 
 // node scripts/system-speech-runtime-smoke.mjs [path/to/unpacked/PRMTA.exe]
 // Uses only the existing public JFK fixture. Never opens a microphone, downloads
-// audio, or uses the user's profile. On macOS, explicit startup may ask for Speech
-// Recognition permission; this is distinct from microphone capture permission.
+// audio, or uses the user's profile. macOS uses the Launch Services harness
+// below so its privacy permission belongs to PRMTA rather than the calling IDE.
+if (process.platform === 'darwin') throw new Error('For macOS privacy permissions, use node scripts/macos-speech-runtime-smoke.mjs /path/to/PRMTA.app (Launch Services).');
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const fixture = join(root, '.tools', 'parakeet-proof', 'jfk-11.wav');
 if (!existsSync(fixture)) throw new Error('Existing public fixture .tools/parakeet-proof/jfk-11.wav is required; this smoke test does not download audio.');
@@ -65,22 +67,20 @@ try {
   expect(status.data.languages.some(language => /^en-/i.test(language)), 'An installed English native recognizer is required for this fixture').toBe(true);
   const begin = Date.now();
   const started = await api('/speech/system/start', { language: 'en' });
-  expect(started.ok, 'Explicit English startup must succeed').toBe(true); expect(started.data.phase).toBe('ready');
+  expect(started.ok, started.data.error || 'Explicit English startup must succeed').toBe(true); expect(started.data.phase).toBe('ready');
   const startupMs = Date.now() - begin;
   await rememberWindowsWorkers(runtime.mainPid);
   if (runtime.platform === 'win32') expect(workerPids.size, 'The native worker must remain alive between requests').toBeGreaterThan(0);
   const transcriptions = [];
   for (let index = 0; index < 2; index++) {
-    // Return counts rather than the private-pipe transcript to this harness.
+    // Validate the public fixture text in memory; evidence contains only counts.
     const result = await page.evaluate(async base64 => {
       const bytes = Uint8Array.from(atob(base64), value => value.charCodeAt(0));
       const response = await fetch('/api/speech?provider=system&language=en', { method: 'POST', headers: { Authorization: `Bearer ${sessionStorage.getItem('prmpt-token')}`, 'Content-Type': 'audio/wav' }, body: bytes });
       const data = await response.json();
-      return { ok: response.ok, status: response.status, textType: typeof data.text, ms: data.ms, characters: typeof data.text === 'string' ? data.text.length : 0, words: typeof data.text === 'string' ? data.text.trim().split(/\s+/).filter(Boolean).length : 0 };
+      return { ok: response.ok, text: data.text, ms: data.ms };
     }, audio.toString('base64'));
-    expect(result.ok, 'Native fixture transcription must succeed').toBe(true); expect(result.textType).toBe('string');
-    expect(typeof result.ms).toBe('number'); expect(Number.isFinite(result.ms)).toBe(true); expect(result.ms).toBeGreaterThanOrEqual(0);
-    transcriptions.push({ ms: result.ms, characters: result.characters, words: result.words });
+    transcriptions.push(assertSpeechFixture(result));
   }
   let missingGermanRejected = null;
   if (!status.data.languages.some(language => /^de-/i.test(language))) {

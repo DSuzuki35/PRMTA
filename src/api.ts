@@ -19,6 +19,7 @@ export type Display = { id: number; label: string; width: number; height: number
 declare global {
   interface Window {
     desktop?: {
+      platform?: string;
       displays(): Promise<Display[]>;
       output(displayId: number, profile: string): Promise<void>;
       closeOutputs(): Promise<void>;

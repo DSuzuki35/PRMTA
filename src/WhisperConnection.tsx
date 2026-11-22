@@ -8,6 +8,7 @@ import { VoiceSetup } from './VoiceSetup';
 function portOf(value: string) { try { return new URL(value).port || '80'; } catch { return ''; } }
 
 export function WhisperConnection({ preferences, onChange, report }: { preferences: Preferences; onChange: (p: Preferences) => void; report: (text: string) => void }) {
+  const mac = window.desktop?.platform === 'darwin';
   const [url, setUrl] = useState(preferences.whisperUrl), [port, setPort] = useState(() => portOf(preferences.whisperUrl));
   const [status, setStatus] = useState('');
   useEffect(() => { setUrl(preferences.whisperUrl); setPort(portOf(preferences.whisperUrl)); setStatus(''); }, [preferences.whisperUrl]);
@@ -25,11 +26,11 @@ export function WhisperConnection({ preferences, onChange, report }: { preferenc
         <label>Local Whisper server<input value={url} onChange={event => { setUrl(event.target.value); setPort(portOf(event.target.value)); }}/></label>
         <label>Whisper port<input type="number" min={1} max={65535} step={1} value={port} aria-invalid={!!error} onChange={event => setPort(event.target.value)}/></label>
       </div>
-      <p className="muted">The Windows app starts Whisper at 127.0.0.1 on this port. If another app uses 8080, try 18080. Apply changes, then reconnect the microphone.</p>
+      <p className="muted">{mac ? 'On macOS, connect to your separately installed whisper.cpp server. The server manages its model and acceleration. Use Apple system speech for built-in offline recognition.' : 'The Windows app starts Whisper at 127.0.0.1 on this port. If another app uses 8080, try 18080.'} Apply changes, then reconnect the microphone.</p>
       {error && <p className="error-text" role="alert">{error}</p>}
       <button type="submit" className="button secondary" disabled={!dirty || !!error}>Apply server</button>
     </form>
     <div className="button-row"><button className="button secondary" disabled={dirty} onClick={() => void api<{ ok: boolean; message: string }>(`/speech/status?whisperUrl=${encodeURIComponent(preferences.whisperUrl)}`).then(s => setStatus(s.message)).catch(e => report(String(e)))}><CheckCircle2 size={16}/>Check connection</button><span className="muted">{status}</span></div>
-    <VoiceSetup preferences={preferences} disabled={dirty}/>
+    {!mac && <VoiceSetup preferences={preferences} disabled={dirty}/>}
   </>;
 }

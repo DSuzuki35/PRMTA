@@ -3,6 +3,16 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHost } from '../server/host';
+it('rejects model downloads when the desktop only supports external Whisper', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prmta-external-models-'));
+  let installs = 0;
+  const host = await createHost({ dataDir: dir, port: 0, models: { list: () => ({ managed: false, models: [], activeModel: null }), install: () => { installs++; } } });
+  try {
+    const response = await fetch(host.origin + '/api/speech/models/install', { method: 'POST', headers: { Authorization: `Bearer ${host.tokens.admin}`, 'Content-Type': 'application/json' }, body: '{"id":"base"}' });
+    expect(response.status).toBe(503);
+    expect(installs).toBe(0);
+  } finally { await host.close(); rmSync(dir, { recursive: true, force: true }); }
+});
 it('inventories native speech without starting recognition and protects native setup/audio routes', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'prmta-system-host-'));
   let language = '', calls = 0;
