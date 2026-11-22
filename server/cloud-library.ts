@@ -185,7 +185,17 @@ export class CloudLibrary {
       this.library.setSetting('recoveredCloudDrafts', recovered); this.library.setSetting('cloudWrite', null);
       return new ConflictError('Cloud file changed during an interrupted save. Your draft is available in Settings > Recovered drafts.');
     };
-    const sameFile = oldFile && (process.platform === 'win32' ? oldFile.toLowerCase() === file.toLowerCase() : oldFile === file);
+    let sameFile = oldFile === file;
+    if (oldFile && !sameFile && existsSync(this.path(oldFile)) && existsSync(this.path(file))) {
+      const source = lstatSync(this.path(oldFile), { bigint: true }), target = lstatSync(this.path(file), { bigint: true });
+      if (source.ino !== 0n && source.dev === target.dev && source.ino === target.ino) {
+        // APFS and NTFS can resolve different capitalization to one entry. OS
+        // labels cannot tell us a volume's case rules. Distinct hard-link names
+        // also share an inode, so keep treating those as separate destinations.
+        const names = readdirSync(this.folder);
+        sameFile = !(names.includes(oldFile) && names.includes(file));
+      }
+    }
     if (oldFile && existsSync(this.path(oldFile))) {
       const actual = readFileSync(this.path(oldFile), 'utf8');
       if (actual !== oldContent && !(sameFile && actual === draft.content)) throw recover();

@@ -1,5 +1,5 @@
 import { afterEach, expect, it } from 'vitest';
-import { mkdtempSync, readdirSync, readFileSync, writeFileSync, unlinkSync, rmSync, copyFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, writeFileSync, unlinkSync, rmSync, copyFileSync, linkSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
@@ -52,6 +52,30 @@ it('keeps the file when changing only title capitalization', () => {
   const cache = local(), folder = dir(), cloud = new CloudLibrary(cache, folder, dir()); cloud.sync();
   const s = cloud.save(draft('Title'), []); cloud.save({ ...s, title: 'TITLE' }, s.heads);
   expect(txt(folder)).toHaveLength(1); expect(readFileSync(join(folder, txt(folder)[0]), 'utf8')).toBe(s.content);
+});
+it('uses the filesystem identity for case-only content edits even when the host reports macOS', () => {
+  const cache = local(), folder = dir(), cloud = new CloudLibrary(cache, folder, dir()); cloud.sync();
+  const s = cloud.save(draft('Title'), []);
+  // Reproduce APFS's default case-insensitive behavior on NTFS as well. Changing
+  // the platform label must not change how the existing real files are handled.
+  const platform = Object.getOwnPropertyDescriptor(process, 'platform')!;
+  try {
+    Object.defineProperty(process, 'platform', { ...platform, value: 'darwin' });
+    cloud.save({ ...s, title: 'TITLE', content: 'Updated during the case-only rename.' }, s.heads);
+  } finally { Object.defineProperty(process, 'platform', platform); }
+  expect(txt(folder)).toHaveLength(1);
+  expect(readFileSync(join(folder, txt(folder)[0]), 'utf8')).toBe('Updated during the case-only rename.');
+  cloud.sync(); expect(cache.get(s.id)?.deleted).toBe(false); expect(cache.get(s.id)?.title).toBe('TITLE');
+});
+it('treats distinct directory entries as distinct even when hard links share a file identity', () => {
+  const cache = local(), folder = dir(), cloud = new CloudLibrary(cache, folder, dir()); cloud.sync();
+  const s = cloud.save(draft('Original'), []);
+  linkSync(join(folder, 'Original.txt'), join(folder, 'Destination.txt'));
+  cache.setSetting('cloudWrite', { draft: { ...s, title: 'Destination', content: 'Pending new text' }, expectedHeads: s.heads, oldFile: 'Original.txt', file: 'Destination.txt', oldContent: s.content });
+  expect(() => cloud.sync()).toThrow(/Recovered drafts/);
+  expect(readFileSync(join(folder, 'Original.txt'), 'utf8')).toBe(s.content);
+  expect(readFileSync(join(folder, 'Destination.txt'), 'utf8')).toBe(s.content);
+  expect(cache.getSetting<any[]>('recoveredCloudDrafts', [])[0].content).toBe('Pending new text');
 });
 it('reports unsuitable TXT files without blocking valid scripts or erasing them', () => {
   const cache = local(), folder = dir(), cloud = new CloudLibrary(cache, folder, dir()); cloud.sync(); const s = cloud.save(draft(), []);
