@@ -15,8 +15,6 @@ jobs:
         include:
           - runner: macos-15
             arch: arm64
-          - runner: macos-15-intel
-            arch: x64
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     env:
@@ -47,7 +45,7 @@ jobs:
           test -n "$app_path"
           helper_path="$app_path/Contents/Resources/system-speech/prmta-speech"
           test -x "$helper_path"
-          lipo "$helper_path" -verify_arch "${{ matrix.arch == 'x64' && 'x86_64' || 'arm64' }}"
+          lipo "$helper_path" -verify_arch arm64
           codesign --verify --deep --strict --verbose=2 "$app_path"
           plutil -extract NSMicrophoneUsageDescription raw "$app_path/Contents/Info.plist"
           plutil -extract NSSpeechRecognitionUsageDescription raw "$app_path/Contents/Info.plist"

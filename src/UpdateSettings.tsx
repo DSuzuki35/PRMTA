@@ -21,7 +21,7 @@ export function UpdateSettings({ report }: { report: (message: string) => void }
   };
   return <section className="settings-card" aria-labelledby="updates-heading">
     <div className="section-heading"><h2 id="updates-heading"><Download size={21}/>App updates</h2>{status && <span className="pill">Version {status.currentVersion}</span>}</div>
-    <p className="muted">{window.desktop?.platform === 'darwin' || status?.mode === 'macos-manual' ? 'Mac test builds are updated manually. Choose the download for your Mac: Apple Silicon (M-series) or Intel.' : 'Installed Windows apps check and download updates automatically. Installation starts only when you choose Restart and install.'}</p>
+    <p className="muted">{window.desktop?.platform === 'darwin' || status?.mode === 'macos-manual' ? 'Mac test builds are updated manually. Download the Apple Silicon (M-series) package.' : 'Installed Windows apps check and download updates automatically. Installation starts only when you choose Restart and install.'}</p>
     <p role="status" aria-live="polite">{status?.message ?? (window.desktop ? 'Loading update status…' : 'Updates are managed in the PRMTA desktop app.')}</p>
     {status?.phase === 'downloading' && <label>Download progress: {status.percent ?? 0}%<progress aria-label="Update download progress" max={100} value={status.percent ?? 0}/></label>}
     <div className="button-row">

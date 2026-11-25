@@ -26,7 +26,7 @@ module.exports = {
   },
   mac: {
     icon: 'build/icon-mac.png',
-    target: ['dmg', 'zip'],
+    target: [{ target: 'dmg', arch: ['arm64'] }, { target: 'zip', arch: ['arm64'] }],
     artifactName: 'PRMTA-${version}-macOS-${arch}.${ext}',
     category: 'public.app-category.productivity',
     minimumSystemVersion: '13.0',

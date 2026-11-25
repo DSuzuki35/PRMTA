@@ -34,9 +34,9 @@ Both Windows x64 downloads include the local CPU speech engine and Base model. T
 | **PRMTA-Setup-0.4.2-x64.exe** | Recommended: install PRMTA, create shortcuts and receive automatic updates. |
 | **PRMTA-Portable-0.4.2-x64.exe** | Run without installation and download updates manually. |
 
-Version **0.4.2** includes Windows updates and experimental macOS packages. Download the Mac DMG for [Apple Silicon](https://github.com/DSuzuki35/PRMTA/releases/download/v0.4.2/PRMTA-0.4.2-macOS-arm64.dmg) or [Intel](https://github.com/DSuzuki35/PRMTA/releases/download/v0.4.2/PRMTA-0.4.2-macOS-x64.dmg). Open the DMG and drag PRMTA into Applications.
+Version **0.4.2** includes Windows updates and experimental macOS packages. Download the Mac DMG for [Apple Silicon](https://github.com/DSuzuki35/PRMTA/releases/download/v0.4.2/PRMTA-0.4.2-macOS-arm64.dmg). Open the DMG and drag PRMTA into Applications.
 
-macOS 13+ test builds support Apple Silicon and Intel, with Apple on-device speech or a separately installed local Whisper server. Mac packages use manual updates and are ad-hoc signed, not notarized. See the [Mac build and testing guide](docs/MACOS.md) for installation and remaining microphone/permission acceptance checks.
+macOS 13+ test builds support Apple Silicon only, with Apple on-device speech or a separately installed local Whisper server. Mac packages use manual updates and are ad-hoc signed, not notarized. See the [Mac build and testing guide](docs/MACOS.md) for installation and remaining microphone/permission acceptance checks.
 
 PRMTA 0.2.0 preserves the existing PRMPT 0.1 profile when available. Version 0.2.5 converts old cloud revision folders to current TXT files after verifying a local backup. Use 0.2.5 or newer with converted cloud folders.
 
@@ -70,7 +70,7 @@ For **Parakeet**, open **Settings > Voice follow > Speech recognition**, select 
 | --- | --- |
 | [User guide](docs/USER-GUIDE.md) | Editing, formatting, displays, OBS, OpenKneeboard, shortcuts, controllers, remote and cloud folders. |
 | [Voice & models](docs/VOICE.md) | Model choices, local recognition, downloads, external servers and troubleshooting. |
-| [macOS test builds](docs/MACOS.md) | Apple speech, Apple Silicon/Intel builds, signing and the Mac testing checklist. |
+| [macOS test builds](docs/MACOS.md) | Apple speech, Apple Silicon builds, signing and the Mac testing checklist. |
 | [Architecture & development](docs/ARCHITECTURE.md) | Components, storage format, compatibility, security boundaries, build and test commands. |
 | [Verification](docs/verification.md) | Release checks, Claude Code review, and what still requires physical hardware testing. |
 | [Changelog](CHANGELOG.md) | Release changes. |

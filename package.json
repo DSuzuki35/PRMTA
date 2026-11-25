@@ -15,7 +15,7 @@
     "test:e2e": "playwright test",
     "package": "npm run build && electron-builder --win --dir",
     "package:release": "npm run build && electron-builder --win nsis portable --x64 --publish never",
-    "package:mac": "npm run build && electron-builder --config build/electron-builder.mac.cjs --mac dmg zip --publish never",
+    "package:mac": "npm run build && electron-builder --config build/electron-builder.mac.cjs --mac dmg zip --arm64 --publish never",
     "build:mac-speech": "node scripts/build-macos-speech.mjs"
   },
   "dependencies": {
