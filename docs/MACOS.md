@@ -4,11 +4,11 @@ The macOS build is experimental. Apple Silicon and Intel DMG/ZIP packages have b
 
 PRMTA's Electron 45 application requires **macOS 13 Ventura or later**, on Apple silicon (`arm64`) or Intel (`x64`). The speech helper itself targets macOS 12, but that does not lower the application's requirement. [Electron 44 removed macOS 12 support](https://www.electronjs.org/blog/electron-44-0).
 
-## 0.4.1 installation and updates
+## 0.4.2 installation and updates
 
-Download the DMGs from the [0.4.1 macOS test release](https://github.com/DSuzuki35/PRMTA/releases/tag/v0.4.1). This is a Mac-only prerelease; Windows installers and automatic updates stay on stable 0.4.0.
+Download the DMGs from the [0.4.2 macOS test release](https://github.com/DSuzuki35/PRMTA/releases/tag/v0.4.2). The release includes stable Windows installers and experimental Mac packages. Mac updates remain manual.
 
-Choose `PRMTA-0.4.1-macOS-arm64.dmg` for an M-series Mac or `PRMTA-0.4.1-macOS-x64.dmg` for Intel. Open the DMG and copy PRMTA to Applications. For an update, quit the running app before replacing it; the application profile, scripts and saved preferences remain outside the bundle. Do not run directly from the mounted DMG. These test builds have no automatic update feed. Gatekeeper restrictions still apply because they are not Developer ID signed or notarized; local source builds are an alternative for testing.
+Choose `PRMTA-0.4.2-macOS-arm64.dmg` for an M-series Mac or `PRMTA-0.4.2-macOS-x64.dmg` for Intel. Open the DMG and copy PRMTA to Applications. For an update, quit the running app before replacing it; the application profile, scripts and saved preferences remain outside the bundle. Do not run directly from the mounted DMG. These test builds have no automatic update feed. Gatekeeper restrictions still apply because they are not Developer ID signed or notarized; local source builds are an alternative for testing.
 
 ## External Whisper on Mac
 
