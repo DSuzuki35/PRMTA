@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { Appearance, SessionState } from '../shared/model';
 import { tokenize } from '../shared/text';
 import { navigationStarts, pagesFor } from '../shared/pages';
@@ -142,7 +142,7 @@ export function Prompter({ session, appearance, onSeek, fullscreen = false }: { 
   }, [onSeek]);
   const alpha = appearance.transparent ? 0 : appearance.backgroundOpacity / 100;
   const rgb = [1, 3, 5].map(offset => parseInt(appearance.background.slice(offset, offset + 2), 16));
-  return <div ref={viewport} className={`prompter ${fullscreen ? 'full' : ''} ${alpha === 0 ? 'transparent' : ''}`} style={{ background: `rgba(${rgb.join(',')},${alpha})`, color: appearance.color }}>
+  return <div ref={viewport} className={`prompter ${fullscreen ? 'full' : ''} ${alpha === 0 ? 'transparent' : ''}`} style={{ background: `rgba(${rgb.join(',')},${alpha})`, color: appearance.color, '--stage-direction-color': appearance.stageDirectionColor } as CSSProperties}>
     {!paged && <div className="reading-guide" style={{ top: `${appearance.guide}%` }}><span/><span/></div>}
     <div className="mirror-plane" style={{ transform: `scale(${appearance.mirrorX ? -1 : 1},${appearance.mirrorY ? -1 : 1})` }}>
       <div ref={text} className={`prompter-text font-${appearance.font}`} style={{ left: `${(100 - appearance.width) / 2}%`, width: `${appearance.width}%`, fontSize: appearance.fontSize, lineHeight: appearance.lineHeight, textAlign: appearance.align }}>

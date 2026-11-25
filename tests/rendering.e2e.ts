@@ -65,6 +65,25 @@ test('stage directions without narration display safely and never become voice t
   await expect(page.locator('[data-word]')).toHaveCount(0);
 });
 
+test('stage direction color updates output and page previews while staying independent per profile', async ({ page, context }) => {
+  host.session.load({ id: 'cue-color', title: 'Cue color', content: '[Look up] One two three.\n---\n[Smile] Four five six.' });
+  await page.goto(host.url('admin'));
+  const output = await context.newPage(); await output.goto(host.url('output'));
+  await page.getByLabel('Output profile').selectOption('display');
+  await page.getByLabel('Text flow').selectOption('page');
+  await page.getByRole('switch', { name: 'Preview next line', exact: true }).check();
+  await page.getByLabel('Stage direction color', { exact: true }).fill('#83e6bd');
+  await expect(output.locator('.stage-direction').first()).toHaveCSS('color', 'rgb(131, 230, 189)');
+  await expect(output.locator('.next-page-preview .stage-direction')).toHaveCSS('color', 'rgb(131, 230, 189)');
+  await page.getByLabel('Output profile').selectOption('studio');
+  await expect(page.getByLabel('Stage direction color', { exact: true })).toHaveValue('#ffcf85');
+  await expect(page.locator('.stage-direction').first()).toHaveCSS('color', 'rgb(255, 207, 133)');
+  await page.reload(); await page.getByLabel('Output profile').selectOption('display');
+  await expect(page.getByLabel('Stage direction color', { exact: true })).toHaveValue('#83e6bd');
+  await output.reload();
+  await expect(output.locator('.stage-direction').first()).toHaveCSS('color', 'rgb(131, 230, 189)');
+});
+
 test('voice preview follows fresh audio on both surfaces and corrects without marking guesses as read', async ({ page, context }) => {
   host.session.load({ id: 'voice', title: 'Voice', content: 'one two three four five six seven eight nine ten' });
   await page.goto(host.url('admin'));

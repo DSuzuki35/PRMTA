@@ -34,7 +34,7 @@ Without explicit page separators, page mode packs complete sentences into pages 
 
 Write stage directions in square brackets, for example `Welcome. [Pause and switch camera] Here is the next idea.` They appear in amber with a dark background and may span multiple lines. Voice follow skips the directions and listens for the narration after them; they do not count towards spoken word counts, timing or predicted word highlighting. You can pause for a cue and continue reading normally. The existing limits against distant voice jumps still apply.
 
-In Studio, choose an **Output profile** and toggle **Show stage directions**. Visibility is saved separately for Studio preview, External display / browser, and VR / OpenKneeboard. Hiding directions changes only that output; the editor, saved TXT and exports retain them. Complete bracket pairs are required; an unfinished bracket remains ordinary text. Directions before an explicit page separator stay on that page.
+In Studio, choose an **Output profile** and toggle **Show stage directions**. Use the **Stage directions** color picker directly below to choose their text color (amber by default). Visibility and color are saved separately for Studio preview, External display / browser, and VR / OpenKneeboard. Hiding directions changes only that output; the editor, saved TXT and exports retain them. Complete bracket pairs are required; an unfinished bracket remains ordinary text. Directions before an explicit page separator stay on that page.
 
 Use **Expand editor** at the top right of the editor to fill the PRMTA window. **Esc** or **Exit expanded editor** returns to the library layout without losing the current draft. This does not enter operating-system fullscreen.
 

@@ -59,4 +59,12 @@ describe('optional stage directions', () => {
     expect(appearanceSchema.parse(legacyAppearance)).toMatchObject({ showStageDirections: true });
     expect(appearanceSchema.parse({ ...defaultAppearance, showStageDirections: false })).toMatchObject({ showStageDirections: false });
   });
+
+  test('legacy profiles keep amber cues and custom colors must be valid hex colors', () => {
+    const legacyAppearance = { ...defaultAppearance } as Record<string, unknown>;
+    delete legacyAppearance.stageDirectionColor;
+    expect(appearanceSchema.parse(legacyAppearance)).toMatchObject({ stageDirectionColor: '#ffcf85' });
+    expect(appearanceSchema.parse({ ...legacyAppearance, stageDirectionColor: '#83e6bd' })).toMatchObject({ stageDirectionColor: '#83e6bd' });
+    expect(appearanceSchema.safeParse({ ...legacyAppearance, stageDirectionColor: 'invalid' }).success).toBe(false);
+  });
 });

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Added optional stage directions in `[square brackets]`. Prompter outputs show cues while voice follow, pacing and navigation use only the spoken text. Source TXT and editor content remain unchanged.
+- Added per-output stage direction visibility and text color, including browser, external display and VR outputs. Existing profiles default to visible amber cues.
+
 ## 0.4.1
 
 - Prevented older settings-save responses from overwriting newer edits, including rapid language changes. Preference writes are serialized and acknowledgements are matched to the current edit.
