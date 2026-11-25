@@ -10,6 +10,61 @@ test.afterAll(async () => { await host.close(); rmSync(dir, { recursive: true, f
 const post = (path: string, body: unknown) => fetch(`${host.origin}/api${path}`, { method: 'POST', headers: { Authorization: `Bearer ${host.tokens.admin}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
 test.beforeEach(async () => { await post('/preferences', structuredClone(defaultPreferences)); });
 
+test('stage directions are optional across profiles without changing voice indices or script source', async ({ page, context }, testInfo) => {
+  const content = '[Look at camera] One two three.[Pause for the next shot] Four five six. [Fade out]';
+  host.session.load({ id: 'directions', title: 'Directions', content });
+  await page.goto(host.url('admin'));
+  const output = await context.newPage(); await output.goto(host.url('output'));
+  for (const surface of [page, output]) {
+    await expect(surface.locator('.stage-direction')).toHaveCount(3);
+    await expect(surface.locator('[data-word]')).toHaveCount(6);
+    await expect(surface.locator('[data-word="3"]')).toHaveText('Four');
+    expect(await surface.locator('.stage-direction').first().evaluate(el => getComputedStyle(el).color)).not.toBe(await surface.locator('[data-word="0"]').evaluate(el => getComputedStyle(el).color));
+  }
+  await page.screenshot({ path: testInfo.outputPath('stage-directions-studio.png') });
+  await output.screenshot({ path: testInfo.outputPath('stage-directions-output.png') });
+  await page.getByLabel('Output profile').selectOption('display');
+  await page.getByRole('switch', { name: 'Show stage directions', exact: true }).uncheck();
+  await expect(output.locator('.stage-direction')).toHaveCount(0);
+  await expect(output.locator('.prompter-text')).not.toContainText('Pause');
+  await page.getByLabel('Output profile').selectOption('studio');
+  await expect(page.locator('.stage-direction')).toHaveCount(3);
+  await post('/command', { type: 'mode', mode: 'voice' });
+  await post('/command', { type: 'play', countdown: 0 });
+  await post('/command', { type: 'transcript', text: 'one two three' });
+  for (const surface of [page, output]) await expect(surface.locator('.current-word')).toHaveText('Four');
+  expect(host.session.state.script?.content).toBe(content);
+  await post('/command', { type: 'pause' });
+  await output.reload();
+  await expect(output.locator('.stage-direction')).toHaveCount(0);
+  await expect(output.locator('[data-word="3"]')).toHaveText('Four');
+});
+
+test('stage directions stay with the next page including previews and closing cues', async ({ page }) => {
+  host.session.load({ id: 'cue-pages', title: 'Cue pages', content: '[Start] One two three.\n[End first shot]\n---\n[Next camera [close up]] Four five six. [End shot]' });
+  const preferences = structuredClone(defaultPreferences);
+  preferences.profiles.display.flow = 'page'; preferences.profiles.display.previewNextLine = true;
+  await post('/preferences', preferences); await page.goto(host.url('output'));
+  await expect(page.locator('.page-number')).toHaveText('1 / 2');
+  await expect(page.locator('.prompter-text > span .stage-direction')).toHaveText(['[Start]', '[End first shot]']);
+  await expect(page.locator('.next-page-preview .stage-direction').first()).toHaveText('[Next camera [close up]]');
+  await post('/command', { type: 'navigate', unit: 'page', direction: 1 });
+  await expect(page.locator('.page-number')).toHaveText('2 / 2');
+  await expect(page.locator('.stage-direction')).toHaveText(['[Next camera [close up]]', '[End shot]']);
+  await expect(page.locator('[data-word="3"]')).toHaveText('Four');
+  preferences.profiles.display.showStageDirections = false;
+  await post('/preferences', preferences);
+  await expect(page.locator('.stage-direction')).toHaveCount(0);
+  await expect(page.locator('.page-number')).toHaveText('2 / 2');
+});
+
+test('stage directions without narration display safely and never become voice targets', async ({ page }) => {
+  host.session.load({ id: 'cue-only', title: 'Cue only', content: '[Wait for recording to start]' });
+  await page.goto(host.url('output'));
+  await expect(page.locator('.stage-direction')).toHaveText('[Wait for recording to start]');
+  await expect(page.locator('[data-word]')).toHaveCount(0);
+});
+
 test('voice preview follows fresh audio on both surfaces and corrects without marking guesses as read', async ({ page, context }) => {
   host.session.load({ id: 'voice', title: 'Voice', content: 'one two three four five six seven eight nine ten' });
   await page.goto(host.url('admin'));

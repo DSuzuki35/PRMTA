@@ -1,4 +1,4 @@
-import { tokenize, type Word } from './text';
+import { maskStageDirections, tokenize, type Word } from './text';
 export type ScriptPage = { start: number; end: number };
 const targetWords = 60;
 const abbreviations = new Set(['mr', 'mrs', 'ms', 'dr', 'prof', 'sr', 'jr', 'st', 'vs', 'nr', 'bzw', 'ca']);
@@ -10,6 +10,7 @@ function sentenceEnds(content: string, words: Word[], i: number): boolean {
   return /[!?…]/u.test(gap) || (/\./.test(gap) && !adjacentNumber && !abbreviations.has(words[i].normalized) && !compound && (!words[i + 1] || /\s/.test(gap)));
 }
 export function navigationStarts(content: string, unit: 'page' | 'paragraph' | 'sentence' | 'chapter'): number[] {
+  content = maskStageDirections(content);
   if (unit === 'page') return pagesFor(content).map(page => page.start);
   const words = tokenize(content), starts: number[] = words.length ? [0] : [];
   if (unit === 'chapter') {
@@ -41,6 +42,7 @@ export function navigateTo(starts: number[], position: number, direction: -1 | 1
   return starts[Math.max(0, Math.min(starts.length - 1, index + direction))];
 }
 export function pagesFor(content: string): ScriptPage[] {
+  content = maskStageDirections(content);
   const chunks = content.split(/^\s*\\?---\s*$/m); const pages: ScriptPage[] = []; let offset = 0;
   if (chunks.length > 1) {
     for (const chunk of chunks) { const count = tokenize(chunk).length; if (count) pages.push({ start: offset, end: offset + count }); offset += count; }

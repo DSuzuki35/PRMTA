@@ -24,6 +24,7 @@ export const appearanceSchema = z.object({
   smoothScroll: z.boolean().default(true),
   smoothVoice: z.boolean().default(true),
   previewNextLine: z.boolean().default(false),
+  showStageDirections: z.boolean().default(true),
   font: z.enum(['sans', 'serif', 'mono']), align: z.enum(['left', 'center']),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/), background: z.string().regex(/^#[0-9a-fA-F]{6}$/),
   flow: z.enum(['scroll', 'page']).default('scroll'),
@@ -33,7 +34,7 @@ export const defaultAppearance: Appearance = {
   fontSize: 56, lineHeight: 1.6, width: 78, guide: 35, mirrorX: false, mirrorY: false,
   highlight: true, dimRead: true, transparent: false, backgroundOpacity: 100, smoothScroll: true, previewNextLine: false, font: 'sans', align: 'left',
   color: '#f2f1eb', background: '#101113',
-  flow: 'scroll', smoothVoice: true,
+  flow: 'scroll', smoothVoice: true, showStageDirections: true,
 };
 const buttonSchema = z.number().int().min(0).max(127).nullable();
 export const gamepadActions = [
