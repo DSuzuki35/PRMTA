@@ -184,6 +184,11 @@ test('custom Cmd shortcuts can be reused when the browser omits the main keyup',
   await post('/preferences', { ...defaultPreferences, shortcuts: { ...defaultPreferences.shortcuts, nextSentence: 'Meta+KeyK' } });
   await page.goto(host.url('admin'));
   await page.getByText('Studio connected', { exact: true }).waitFor();
+  // Socket open precedes the initial preferences message. Confirm the binding
+  // has rendered before dispatching a synthetic key that cannot wait for it.
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  await expect(page.locator('output[aria-labelledby="shortcut-label-nextSentence"]')).toHaveText('Win / Cmd + K');
+  await page.getByRole('button', { name: 'Prompter', exact: true }).click();
   await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyK', metaKey: true, bubbles: true, cancelable: true })));
   await expect.poll(() => host.session.state.position).toBe(3);
   await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keyup', { code: 'MetaLeft', metaKey: false, bubbles: true })));

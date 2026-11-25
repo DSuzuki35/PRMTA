@@ -93,3 +93,41 @@ test('status failures are visible without attempting to start the native engine'
   await expect(page.getByRole('button', { name: 'Prepare system speech', exact: true })).toBeDisabled();
   expect(starts).toBe(0); await expectNoMicrophone(page);
 });
+
+test('an older preference response cannot overwrite a newer language edit', async ({ page }) => {
+  await page.clock.install();
+  let client: import('@playwright/test').WebSocketRoute;
+  let oldState: string | Buffer | undefined;
+  let oldRoute: import('@playwright/test').Route | undefined;
+  let oldResponse: import('@playwright/test').APIResponse | undefined;
+  let posts = 0;
+  await page.routeWebSocket('**/ws', ws => {
+    client = ws;
+    const remote = ws.connectToServer();
+    remote.onMessage(message => {
+      const state = JSON.parse(String(message));
+      if (!oldState && state.preferences?.provider === 'system' && state.preferences.language === 'en') oldState = message;
+      else ws.send(message);
+    });
+    ws.onMessage(message => remote.send(message));
+  });
+  await page.route('**/api/preferences', async route => {
+    if (++posts === 1) { oldRoute = route; oldResponse = await route.fetch(); }
+    else await route.continue();
+  });
+  await page.route('**/api/speech/system/status', route => route.fulfill({ json: available }));
+  await chooseSystem(page);
+  await expect.poll(() => !!oldResponse && !!oldState).toBe(true);
+  await page.clock.pauseAt(new Date(Date.now() + 1000));
+  const language = page.getByRole('combobox', { name: 'Script language', exact: true });
+  await language.selectOption('de');
+  await oldRoute!.fulfill({ response: oldResponse! });
+  // The browser clock is paused: the new debounce cannot fire while the old
+  // fetch completion and its WebSocket acknowledgement are delivered.
+  await page.waitForTimeout(50);
+  client!.send(oldState!);
+  await page.waitForTimeout(50);
+  await expect(language).toHaveValue('de');
+  await page.clock.runFor(200);
+  await expect.poll(() => host.getPreferences().language).toBe('de');
+});

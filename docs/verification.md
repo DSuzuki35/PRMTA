@@ -1,5 +1,15 @@
 # Release verification — PRMTA
 
+## 0.4.1 macOS test-build verification
+
+- On an Apple Silicon Mac: production build and 242 unit/integration tests passed; two Windows-only tests were skipped. Both Python prerequisite tests passed. The final complete Chromium suite passed all 74 workflows.
+- The first full UI run exposed an existing settings-save race: an older response could overwrite a newer language edit. A controlled response/WebSocket regression reproduced it before the fix; revision guards and serialized saves passed the regression and final full suite.
+- ARM64 and x64 DMG/ZIP packages were built locally. Both app bundles passed deep strict signature checks and their speech helpers passed the corresponding architecture check. The Intel package was cross-built, not run on physical Intel hardware in this local check.
+- The final packaged ARM64 app passed isolated startup, Apple locale inventory, default Mac shortcuts/provider, external Whisper startup/transcription, model-download rejection, Mac settings, zero renderer errors and orderly shutdown.
+- Apple Speech also transcribed the public whisper.cpp JFK fixture twice through a Launch Services app launch (22 words each), rejected unavailable German support, recovered to English and shut down. No microphone was captured. The initial direct IDE-spawn attempt aborted in TCC because the IDE was the responsible process; the permission-sensitive harness now launches PRMTA using macOS Launch Services.
+- Independent code review found no blocking Windows regression. The remaining misleading saved-Parakeet pane and Mac background-input control were removed, with focused Mac/Windows UI checks passing. Windows bundled Whisper process/model behavior and Windows update guards remain covered by the shared tests; native Windows verification is delegated to the PR CI.
+- These are ad-hoc-signed test builds with manual Mac updates. No Developer ID signing, notarization, physical microphone/denied-permission sequence, real controller hardware, multi-monitor setup, or physical Intel test is claimed.
+
 ## 0.4.0 update verification
 
 - [Windows CI passed](https://github.com/DSuzuki35/PRMTA/actions/runs/45010763506) for source `a543c8e`: production build, 237 unit/integration tests, two Python prerequisite tests and 70 Chromium workflows. Local focused cloud/library workflows also passed after the macOS case-only filename correction.

@@ -10,7 +10,8 @@ export class WhisperService {
   private closed = false;
   private activeUrl: string | null = null;
   activeModel: string | null = null;
-  constructor(private root: string, private modelPath: (id: string) => string | null) {}
+  constructor(private root: string, private modelPath: (id: string) => string | null, private platform: NodeJS.Platform = process.platform) {}
+  get managed() { return this.platform === 'win32'; }
   async ensure(url: string, model = 'base'): Promise<void> {
     modelById(model);
     url = whisperEndpoint(url).origin;
@@ -29,9 +30,9 @@ export class WhisperService {
   }
   private async start(url: string, model: string) {
     const healthy = async () => { try { const response = await fetch(`${url}/health`, { signal: AbortSignal.timeout(1500), redirect: 'error' }); return response.ok && (await response.json() as { status?: string }).status === 'ok'; } catch { return false; } };
-    if (!isManagedWhisperUrl(url)) {
+    if (!this.managed || !isManagedWhisperUrl(url)) {
       if (await healthy()) return;
-      throw new Error('Start your own Whisper server at this address. Automatic startup uses 127.0.0.1 with the port selected in Settings.');
+      throw new Error(this.managed ? 'Start your own Whisper server at this address. Automatic startup uses 127.0.0.1 with the port selected in Settings.' : 'Start an external Whisper server at this address, or select Apple system speech on macOS. Built-in Whisper setup is available on Windows only.');
     }
     const endpoint = whisperEndpoint(url), port = Number(endpoint.port || 80);
     const path = this.modelPath(model), exe = join(this.root, 'Release', 'whisper-server.exe');

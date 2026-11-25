@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { UpdateStatus } from '../shared/updater';
 import type { ControllerContext } from '../shared/controller';
 contextBridge.exposeInMainWorld('desktop', {
+  platform: process.platform,
   displays: () => ipcRenderer.invoke('displays'),
   output: (displayId: number, profile: string) => ipcRenderer.invoke('output', displayId, profile),
   closeOutputs: () => ipcRenderer.invoke('close-outputs'),

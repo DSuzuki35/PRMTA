@@ -42,6 +42,13 @@ export const defaultShortcuts: Record<ShortcutAction, string | null> = {
   modeVoice: null, modeTimed: null, modeManual: null, loop: null,
 };
 
+export function shortcutsForPlatform(platform?: string): Record<ShortcutAction, string | null> {
+  return platform === 'darwin' ? { ...defaultShortcuts,
+    previousSentence: 'Meta+ArrowLeft', nextSentence: 'Meta+ArrowRight',
+    previousParagraph: 'Meta+ArrowUp', nextParagraph: 'Meta+ArrowDown',
+  } : { ...defaultShortcuts };
+}
+
 const codePattern = /^(?:Key[A-Z]|Digit[0-9]|F(?:[1-9]|1[0-9]|2[0-4])|Numpad(?:[0-9]|Add|Subtract|Multiply|Divide|Decimal|Enter|Equal|Comma)|Arrow(?:Up|Down|Left|Right)|Space|Enter|Escape|Tab|Home|End|PageUp|PageDown|Insert|Delete|Backspace|Backquote|Minus|Equal|BracketLeft|BracketRight|Backslash|IntlBackslash|IntlRo|IntlYen|Semicolon|Quote|Comma|Period|Slash|Pause|ScrollLock|NumLock|CapsLock|ContextMenu)$/;
 const modifierOrder = ['Ctrl', 'Alt', 'Shift', 'Meta'];
 

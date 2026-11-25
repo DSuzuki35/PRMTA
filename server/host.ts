@@ -24,11 +24,11 @@ type ParakeetBackend = {
   transcribe(wav: Buffer): Promise<{ text: string; ms: number }>;
 };
 type SystemSpeechBackend = { status(): Promise<SystemSpeechStatus>; ensure(language: SystemSpeechLanguage): Promise<void>; transcribe(wav: Buffer, language?: SystemSpeechLanguage): Promise<{ text: string; ms: number }> };
-export async function createHost(options: { dataDir: string; port?: number; staticDir?: string; canControl?: () => boolean; ensureSpeech?: (url: string, model: string) => Promise<void>; models?: { list: () => ModelsInfo; install: (id: string) => void }; parakeet?: ParakeetBackend; systemSpeech?: SystemSpeechBackend; defaultProvider?: 'whisper' | 'system' }) {
+export async function createHost(options: { dataDir: string; port?: number; staticDir?: string; canControl?: () => boolean; ensureSpeech?: (url: string, model: string) => Promise<void>; models?: { list: () => ModelsInfo; install: (id: string) => void }; parakeet?: ParakeetBackend; systemSpeech?: SystemSpeechBackend; defaultProvider?: 'whisper' | 'system'; defaultShortcuts?: typeof defaultPreferences.shortcuts }) {
   const localLibrary = new Library(options.dataDir); let library = localLibrary;
   let cloud: CloudLibrary | null = null;
   const opened = new Map<string, Library>(); const session = new Session();
-  let preferences = preferencesSchema.parse(library.getSetting('preferences', { ...defaultPreferences, provider: options.defaultProvider ?? defaultPreferences.provider }));
+  let preferences = preferencesSchema.parse(library.getSetting('preferences', { ...defaultPreferences, provider: options.defaultProvider ?? defaultPreferences.provider, shortcuts: options.defaultShortcuts ?? defaultPreferences.shortcuts }));
   const tokens = library.getSetting<Record<Role, string>>('tokens', { admin: randomBytes(32).toString('hex'), output: randomBytes(32).toString('hex'), remote: randomBytes(32).toString('hex') });
   library.setSetting('tokens', tokens);
   session.state.speed = preferences.speed; session.state.loop = preferences.loop;
@@ -199,7 +199,7 @@ export async function createHost(options: { dataDir: string; port?: number; stat
   app.get('/api/speech/models', admin, (_req, res) => res.json(options.models?.list() ?? { managed: false, models: [], activeModel: null }));
   app.post('/api/speech/models/install', admin, (req, res) => {
     const { id } = z.object({ id: preferencesSchema.shape.whisperModel }).parse(req.body); modelById(id);
-    if (!options.models) { res.status(503).json({ error: 'Model downloads are available in the desktop app. Configure your standalone Whisper server separately.' }); return; }
+    if (!options.models?.list().managed) { res.status(503).json({ error: 'Built-in model downloads require the Windows app. Configure your external Whisper server separately, or select Apple system speech on macOS.' }); return; }
     options.models.install(id); res.json(options.models.list());
   });
   app.post('/api/speech', admin, express.raw({ type: 'audio/wav', limit: '1mb' }), async (req, res) => {

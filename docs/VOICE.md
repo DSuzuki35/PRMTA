@@ -8,7 +8,7 @@ New profiles default to **English** for Whisper, system speech and browser recog
 
 ## System speech: Windows and Apple
 
-Select **Windows / Apple · system speech** in Settings. The status panel inventories installed languages without requesting microphone or speech permission. **Prepare system speech** initializes the selected engine; turning on the microphone also prepares it if needed. Both paths use your selected script language. Automatic uses English for this provider.
+Select **Windows / Apple · system speech** in Settings (called **Apple · on-device speech** on Mac). The status panel inventories installed languages without requesting microphone or speech permission. **Prepare system speech** initializes the selected engine; turning on the microphone also prepares it if needed. Both paths use your selected script language. Automatic uses English for this provider.
 
 On Windows, PRMTA uses the installed [System.Speech recognizer](https://learn.microsoft.com/en-us/dotnet/api/system.speech.recognition.speechrecognitionengine?view=netframework-4.8). It processes audio locally through a private worker. Install a supported speech language in Windows if it is absent; Windows voice typing availability alone does not guarantee that System.Speech exposes that language. PRMTA lists the recognizers it can actually use.
 
@@ -110,6 +110,8 @@ The catalog uses fixed filenames and verified hashes from the [whisper.cpp model
 Other engines such as faster-whisper can be useful, particularly with a GPU, but their native Python API is not interchangeable with PRMTA's HTTP endpoint. An adapter must implement the contract below. Distilled models require careful compatibility and quality testing; PRMTA does not claim support for every Whisper derivative.
 
 ## External server contract
+
+On Mac, choose **Whisper · external local server**. Start your own compatible server first; its model and acceleration are managed outside PRMTA. No Windows executable or model download is required.
 
 Set a local HTTP URL in Settings. Allowed hostnames are `127.0.0.1`, `localhost`, and `[::1]`. Remote cloud inference endpoints and URL credentials are rejected.
 

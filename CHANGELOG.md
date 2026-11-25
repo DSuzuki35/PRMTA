@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.1
+
+- Prevented older settings-save responses from overwriting newer edits, including rapid language changes. Preference writes are serialized and acknowledgements are matched to the current edit.
+
+- macOS now connects to independently managed Whisper servers on every supported loopback address without requiring Windows binaries or model files. Windows bundled Whisper startup and model selection are preserved.
+- Mac settings identify Apple on-device speech, expose Whisper as an external server, disable Windows-only Parakeet selection, and remove unsupported model downloads. The backend also rejects unmanaged model installation.
+- New Mac profiles and explicit keyboard reset use Cmd + arrows for sentence and paragraph navigation. Existing language choices and shortcut assignments are preserved.
+- Mac test builds explain manual DMG updates without recommending Windows Setup. They remain ad-hoc signed and are not notarized; Windows automatic updates are unchanged.
+- Native speech smoke checks reject empty/unrelated fixture transcripts. Mac CI now runs on pull requests/main and checks UI workflows plus actual packaged-app startup, external Whisper, settings and shutdown on each architecture, without recording a microphone.
+
 ## 0.4.0 - Custom shortcuts, voice commands and system speech
 
 - Released PRMTA as open source under the MIT License, with the license included in Windows and Mac packages. Third-party components and models retain their existing licenses.

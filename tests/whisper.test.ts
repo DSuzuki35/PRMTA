@@ -23,7 +23,7 @@ async function freeUrl() { const server = createServer(); const url = await list
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'prmta-whisper-'));
   mkdirSync(join(root, 'Release')); writeFileSync(join(root, 'Release', 'whisper-server.exe'), 'fixture');
-  service = new WhisperService(root, model => `${model}.bin`);
+  service = new WhisperService(root, model => `${model}.bin`, 'win32');
 });
 afterEach(async () => {
   service.close();
@@ -56,3 +56,18 @@ it.each(['http://127.0.0.1:0', 'http://127.0.0.1:65536', 'https://127.0.0.1:1808
 it('rejects a Fetch-blocked port before launching a server', async () => {
   await expect(service.ensure('http://127.0.0.1:6000')).rejects.toThrow(/port 6000.*reserved/i);
 }, 1000);
+
+it('uses an external Mac Whisper server without Windows binaries or downloaded models', async () => {
+  rmSync(join(root, 'Release'), { recursive: true });
+  service = new WhisperService(root, () => null, 'darwin');
+  const url = await listen(createServer((_req, res) => { res.setHeader('Content-Type', 'application/json'); res.end('{"status":"ok"}'); }));
+  await expect(service.ensure(url, 'turbo-q5')).resolves.toBeUndefined();
+  expect(service.activeModel).toBeNull();
+  service.close();
+  expect((await fetch(`${url}/health`)).ok).toBe(true);
+});
+
+it('guides Mac users to their external server without attempting Windows startup', async () => {
+  service = new WhisperService(root, () => null, 'darwin');
+  await expect(service.ensure(await freeUrl())).rejects.toThrow(/external Whisper server/i);
+});
